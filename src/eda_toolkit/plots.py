@@ -11,7 +11,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from matplotlib import gridspec
-import matplotlib.ticker as mticker  
+import matplotlib.ticker as mticker
 from matplotlib.ticker import FuncFormatter
 import seaborn as sns
 import textwrap
@@ -28,17 +28,18 @@ PathLike = Union[str, Path]
 
 from ._plot_utils import (
     _save_figure,
+    _resolve_save_name,
     _apply_legend,
     _annotate_stacked,
     _add_best_fit,
     _get_label,
+    _apply_thousands,
     _plot_density_overlays,
     _fit_distribution,
     _qq_plot,
     _cdf_exceedance_plot,
     _get_palette,
 )
-
 
 ################################################################################
 ############################## Plot Distributions ##############################
@@ -47,8 +48,7 @@ from ._plot_utils import (
 
 def kde_distributions(*args, **kwargs):
     warnings.warn(
-        "`kde_distributions` is deprecated and will be removed in a future release. "
-        "Use `plot_distributions` instead.",
+        "`kde_distributions` is deprecated. Use `plot_distributions` instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -134,8 +134,8 @@ def plot_distributions(
     hist_color : str, optional (default='#0000FF')
         Color of the histogram bars.
 
-    density_color : str, optional (default='#FF0000')
-        Color of the KDE plot.
+    density_color : str, optional (default=None)
+        Color of the KDE / density curve.
 
     mean_color : str, optional (default='#000000')
         Color of the mean line if `plot_mean` is True.
@@ -177,16 +177,21 @@ def plot_distributions(
         Directory path to save the SVG image of the overall distribution plots.
 
     image_filename : str, optional
-        Filename to use when saving the overall distribution plots.
+        Filename for the overall (subplot grid) figure. If it includes a file
+        extension it is saved verbatim and no output directory is required;
+        otherwise it is used as a base stem with ``image_path_png`` and/or
+        ``image_path_svg``.
 
     bbox_inches : str, optional
         Bounding box to use when saving the figure. For example, 'tight'.
 
     single_var_image_filename : str, optional
-        Filename to use when saving the separate distribution plots. The
-        variable name will be appended to this filename. When using this
-        parameter, the `figsize` parameter is used to determine the size of the
-        individual plots. The `subplot_figsize` parameter is ignored in this context.
+        Filename for the separate per-variable plots. May be a bare stem
+        (legacy: requires ``image_path_png`` / ``image_path_svg``) or a full
+        path with extension (saved verbatim, no directory needed). The
+        variable name is appended to the stem, before the extension. When this
+        is used, ``figsize`` controls the individual plot size and
+        ``subplot_figsize`` is ignored.
 
     y_axis_label : str, optional (default='Density')
         The label to display on the y-axis. If set to `None`, no y-axis label
@@ -275,7 +280,7 @@ def plot_distributions(
     Raises:
     -------
     ValueError
-        If `plot_type` is not one of ['hist', 'kde', 'both'].
+        If `plot_type` is not one of ['hist', 'density', 'both'].
 
     ValueError
         If `stat` is not one of ['count', 'frequency', 'probability',
@@ -630,12 +635,13 @@ def plot_distributions(
     plt.tight_layout(w_pad=w_pad, h_pad=h_pad)
 
     # Save files if paths are provided
-    if image_path_png or image_path_svg:
+    if image_path_png or image_path_svg or image_filename:
         _save_figure(
             fig=fig,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
             filename=image_filename,
+            image_filename=image_filename,
         )
     plt.show()
 
@@ -821,21 +827,23 @@ def plot_distributions(
 
             plt.tight_layout()
 
-            # Save files for the variable of interest if paths are provided
-            if image_path_png and single_var_image_filename:
-                plt.savefig(
-                    os.path.join(
-                        image_path_png,
-                        f"{single_var_image_filename}_{var}.png",
-                    ),
-                    bbox_inches=bbox_inches,
+            # Save files for the variable of interest if a target is provided.
+            # single_var_image_filename may be a bare base name (legacy: needs a
+            # directory) or a full path with extension (saves verbatim, no dir).
+            if single_var_image_filename:
+                directory, base = os.path.split(single_var_image_filename)
+                stem, ext = os.path.splitext(base)
+                per_var_stem = f"{stem}_{var}"
+                per_var_path = (
+                    os.path.join(directory, f"{per_var_stem}{ext}")
+                    if ext
+                    else per_var_stem
                 )
-            if image_path_svg and single_var_image_filename:
-                plt.savefig(
-                    os.path.join(
-                        image_path_svg,
-                        f"{single_var_image_filename}_{var}.svg",
-                    ),
+                _save_figure(
+                    fig=fig,
+                    image_path_png=image_path_png,
+                    image_path_svg=image_path_svg,
+                    image_filename=per_var_path,
                     bbox_inches=bbox_inches,
                 )
             plt.close(
@@ -846,6 +854,7 @@ def plot_distributions(
 ################################################################################
 ###################### Stacked Bar Plots W/ Crosstab Options ###################
 ################################################################################
+
 
 def stacked_crosstab_plot(
     df: pd.DataFrame,
@@ -860,6 +869,7 @@ def stacked_crosstab_plot(
     image_path_png: Optional[str] = None,
     image_path_svg: Optional[str] = None,
     save_formats: Optional[List[str]] = None,
+    image_filename: Optional[str] = None,
     color: Optional[Union[List[str], str]] = None,
     output: str = "both",
     return_dict: bool = False,
@@ -930,10 +940,21 @@ def stacked_crosstab_plot(
     image_path_svg : str, optional
         Directory path where generated SVG plot images will be saved.
 
+    image_filename : str, optional
+        Full destination path for the saved plot(s). If it includes an
+        extension, that extension selects the format unless ``save_formats``
+        is given; the file is saved verbatim and no directory is required. The
+        ``func_col`` entry is appended to the stem so each generated figure
+        stays distinct. When provided, ``image_filename`` takes precedence over
+        the ``image_path_png`` / ``image_path_svg`` directory scheme.
+
     save_formats : list of str, optional (default=None)
-        List of file formats to save the plot images in. Valid formats are
-        'png' and 'svg'. If not provided, defaults to an empty list and no
-        images will be saved.
+        File formats to write ('png' and/or 'svg'). With the
+        ``image_path_png`` / ``image_path_svg`` scheme these select which
+        directories are written. With ``image_filename`` they select which
+        formats are written; if omitted there, the format is taken from the
+        filename's extension (defaulting to 'png'). If neither a directory nor
+        ``image_filename`` is given, nothing is saved.
 
     color : list of str, optional
         List of colors to use for the plots. If not provided, a default
@@ -1057,8 +1078,8 @@ def stacked_crosstab_plot(
         If any columns in `col` or `func_col` are missing in the DataFrame.
 
     ValueError
-        If an invalid save format is specified without providing the
-        corresponding image path.
+        If a format in `save_formats` is not an available save target (no
+        corresponding image path, or not derivable from `image_filename`).
     """
 
     # Check if remove_stacks is used correctly
@@ -1084,7 +1105,7 @@ def stacked_crosstab_plot(
     # Normalize subtitle to a list if a bare string is passed
     if isinstance(subtitle, str):
         subtitle = [subtitle] * len(func_col)
- 
+
     # Validate subtitle length if provided
     if subtitle is not None and len(subtitle) != len(func_col):
         raise ValueError(
@@ -1154,17 +1175,28 @@ def stacked_crosstab_plot(
         ):
             image_path = {}
 
-            if image_path_png:
-                func_col_filename_png = os.path.join(
-                    image_path_png, f"{file_prefix}_{truth}.png"
-                )
-                image_path["png"] = func_col_filename_png
-
-            if image_path_svg:
-                func_col_filename_svg = os.path.join(
-                    image_path_svg, f"{file_prefix}_{truth}.svg"
-                )
-                image_path["svg"] = func_col_filename_svg
+            if image_filename:
+                # image_filename drives the destination; save_formats (or the
+                # filename's own extension) drive which formats are written
+                if_dir, if_base = os.path.split(image_filename)
+                if_stem, if_ext = os.path.splitext(if_base)
+                base_stem = f"{if_stem}_{truth}"
+                fmts = save_formats or ([if_ext.lstrip(".")] if if_ext else ["png"])
+                for fmt in fmts:
+                    image_path[fmt] = (
+                        os.path.join(if_dir, f"{base_stem}.{fmt}")
+                        if if_dir
+                        else f"{base_stem}.{fmt}"
+                    )
+            else:
+                if image_path_png:
+                    image_path["png"] = os.path.join(
+                        image_path_png, f"{file_prefix}_{truth}.png"
+                    )
+                if image_path_svg:
+                    image_path["svg"] = os.path.join(
+                        image_path_svg, f"{file_prefix}_{truth}.svg"
+                    )
 
             fig, axes = plt.subplots(nrows=nrows, ncols=1, figsize=figsize)
 
@@ -1256,7 +1288,9 @@ def stacked_crosstab_plot(
                             )
 
                 if show_legend:
-                    _apply_legend(ax0, legend, legend_loc, label_fontsize, reverse_legend)
+                    _apply_legend(
+                        ax0, legend, legend_loc, label_fontsize, reverse_legend
+                    )
                 else:
                     leg = ax0.get_legend()
                     if leg is not None:
@@ -1351,7 +1385,9 @@ def stacked_crosstab_plot(
                         )
 
                     if show_legend:
-                        _apply_legend(ax0, legend, legend_loc, label_fontsize, reverse_legend)
+                        _apply_legend(
+                            ax0, legend, legend_loc, label_fontsize, reverse_legend
+                        )
                     else:
                         leg = ax0.get_legend()
                         if leg is not None:
@@ -1404,9 +1440,7 @@ def stacked_crosstab_plot(
 
                     # Apply percentage formatter to the normalized count axis
                     if pct_format:
-                        pct_fmt = mticker.FuncFormatter(
-                            lambda val, _: f"{val:.0%}"
-                        )
+                        pct_fmt = mticker.FuncFormatter(lambda val, _: f"{val:.0%}")
                         if kind == "barh":
                             ax1.xaxis.set_major_formatter(pct_fmt)
                         else:
@@ -1442,7 +1476,9 @@ def stacked_crosstab_plot(
                         )
 
                     if show_legend:
-                        _apply_legend(ax1, legend, legend_loc, label_fontsize, reverse_legend)
+                        _apply_legend(
+                            ax1, legend, legend_loc, label_fontsize, reverse_legend
+                        )
                     else:
                         leg = ax1.get_legend()
                         if leg is not None:
@@ -1469,12 +1505,15 @@ def stacked_crosstab_plot(
             elif isinstance(save_formats, tuple):
                 save_formats = list(save_formats)
 
-            # Check for invalid save formats
-            valid_formats = []
-            if image_path_png:
-                valid_formats.append("png")
-            if image_path_svg:
-                valid_formats.append("svg")
+            # Determine which formats are valid targets
+            if image_filename:
+                valid_formats = list(image_path.keys())
+            else:
+                valid_formats = []
+                if image_path_png:
+                    valid_formats.append("png")
+                if image_path_svg:
+                    valid_formats.append("svg")
 
             # Throw an error if an invalid format is specified
             for save_format in save_formats:
@@ -1486,12 +1525,19 @@ def stacked_crosstab_plot(
                         f"Valid options are: {valid_formats}"
                     )
 
-            if save_formats and isinstance(image_path, dict):
-                for save_format in save_formats:
-                    if save_format in image_path:
-                        full_path = image_path[save_format]
-                        plt.savefig(full_path, bbox_inches="tight")
-                        print(f"Plot saved as {full_path}")
+            # image_filename writes every resolved target; the legacy dir path
+            # still filters by save_formats exactly as before
+            if image_filename:
+                to_save = list(image_path.values())
+            else:
+                to_save = [image_path[f] for f in save_formats if f in image_path]
+
+            for full_path in to_save:
+                directory = os.path.dirname(full_path)
+                if directory:
+                    os.makedirs(directory, exist_ok=True)
+                plt.savefig(full_path, bbox_inches="tight")
+                print(f"Plot saved as {full_path}")
 
             plt.show()
 
@@ -1560,6 +1606,7 @@ def stacked_crosstab_plot(
 ############################ Box and Violin Plots ##############################
 ################################################################################
 
+
 def box_violin_plot(
     df: pd.DataFrame,
     metrics_list: List[str],
@@ -1597,8 +1644,9 @@ def box_violin_plot(
     display preferences, including support for axis limits, label customization,
     and rotated layouts.
 
-    Figures are saved only when ``image_filename`` is provided along with at
-    least one of ``image_path_png`` or ``image_path_svg``.
+    Figures are saved only when ``image_filename`` is provided. If it includes
+    an extension the figure is saved verbatim with no directory required;
+    otherwise it is used as a stem with ``image_path_png`` / ``image_path_svg``.
 
     Parameters:
     -----------
@@ -1629,10 +1677,12 @@ def box_violin_plot(
         will not be saved as SVG.
 
     image_filename : str, optional
-        Base filename (without extension) used when saving figures. No files
-        are saved if this is not provided. For individual plots, the metric
-        name and plot type are appended to this base. For subplot grids, the
-        plot type is appended.
+        Filename used when saving figures. No files are saved if this is not
+        provided. May be a bare stem (legacy: requires ``image_path_png`` /
+        ``image_path_svg``) or a full path with extension (saved verbatim, no
+        directory needed). For individual plots the metric name and plot type
+        are appended to the stem; for the subplot grid the plot type is
+        appended. The extension, if present, is preserved.
 
     show_legend : bool, optional (default=True)
         Whether to display the legend on the plots.
@@ -1718,8 +1768,8 @@ def box_violin_plot(
           list of two numbers.
         - If ``plot_type`` is not one of "boxplot", "violinplot", "box",
           or "violin".
-        - If ``image_filename`` is provided but neither ``image_path_png`` nor
-          ``image_path_svg`` is specified.
+        - If ``image_filename`` is provided without an extension and neither
+          ``image_path_png`` nor ``image_path_svg`` is specified.
 
     Notes:
     ------
@@ -1734,6 +1784,8 @@ def box_violin_plot(
       (or ``x_order`` / ``y_order`` depending on orientation).
     - ``suptitle`` applies only to the subplot grid. Individual plots use
       per-subplot titles only.
+    - Tick labels on the numeric (metric) axis are formatted with thousands
+      separators. The categorical comparison axis is left unformatted.
     """
 
     # Coerce metrics_comp string to list
@@ -1796,11 +1848,15 @@ def box_violin_plot(
         )
 
     # Validate image_filename usage
-    if image_filename is not None and not (image_path_png or image_path_svg):
+    if (
+        image_filename is not None
+        and not os.path.splitext(image_filename)[1]
+        and not (image_path_png or image_path_svg)
+    ):
         raise ValueError(
-            "``image_filename`` was provided but neither ``image_path_png`` "
-            "nor ``image_path_svg`` was specified. Provide at least one output "
-            "path to save figures."
+            "``image_filename`` was provided without a file extension and "
+            "neither ``image_path_png`` nor ``image_path_svg`` was specified. "
+            "Provide an extension (e.g. 'plot.png') or at least one output path."
         )
 
     total_plots = len(metrics_list) * len(metrics_comp)
@@ -1893,6 +1949,7 @@ def box_violin_plot(
                 )
                 ax.tick_params(axis="x", rotation=xlabel_rot)
                 ax.tick_params(axis="both", labelsize=tick_fontsize)
+                _apply_thousands(ax, axis="x" if rotate_plot else "y")
 
                 if xlim:
                     ax.set_xlim(xlim)
@@ -1911,14 +1968,20 @@ def box_violin_plot(
                         .replace(")", "")
                         .replace("/", "_per_")
                     )
+                    combo = f"{safe_met_list}_by_{met_comp}_{plot_type}"
+                    if_dir, if_base = os.path.split(image_filename)
+                    if_stem, if_ext = os.path.splitext(if_base)
+                    per_combo_stem = f"{if_stem}_{combo}"
+                    per_combo_name = (
+                        os.path.join(if_dir, f"{per_combo_stem}{if_ext}")
+                        if if_ext
+                        else per_combo_stem
+                    )
                     _save_figure(
                         fig=fig,
                         image_path_png=image_path_png,
                         image_path_svg=image_path_svg,
-                        filename=(
-                            f"{image_filename}_{safe_met_list}"
-                            f"_by_{met_comp}_{plot_type}"
-                        ),
+                        image_filename=per_combo_name,
                     )
 
                 plt.show()
@@ -1995,6 +2058,7 @@ def box_violin_plot(
                 )
                 ax.tick_params(axis="x", rotation=xlabel_rot)
                 ax.tick_params(axis="both", labelsize=tick_fontsize)
+                _apply_thousands(ax, axis="x" if rotate_plot else "y")
 
                 if xlim:
                     ax.set_xlim(xlim)
@@ -2012,14 +2076,21 @@ def box_violin_plot(
         plt.tight_layout()
 
         if image_filename is not None:
+            if_dir, if_base = os.path.split(image_filename)
+            if_stem, if_ext = os.path.splitext(if_base)
+            grid_stem = f"{if_stem}_{plot_type}"
+            grid_name = (
+                os.path.join(if_dir, f"{grid_stem}{if_ext}") if if_ext else grid_stem
+            )
             _save_figure(
                 fig=fig,
                 image_path_png=image_path_png,
                 image_path_svg=image_path_svg,
-                filename=f"{image_filename}_{plot_type}",
+                image_filename=grid_name,
             )
 
         plt.show()
+
 
 ################################################################################
 ########################## Multi-Purpose Scatter Plots #########################
@@ -2037,6 +2108,7 @@ def scatter_fit_plot(
     max_cols: int = 4,
     image_path_png: Optional[str] = None,
     image_path_svg: Optional[str] = None,
+    image_filename: Optional[str] = None,
     save_plots: Optional[str] = None,
     show_legend: bool = True,
     legend_loc: str = "best",
@@ -2105,9 +2177,19 @@ def scatter_fit_plot(
     image_path_svg : str, optional
         Directory path to save SVG images of the scatter plots.
 
+    image_filename : str, optional
+        Destination for saved plots. May be a bare stem (legacy: requires
+        ``image_path_png`` / ``image_path_svg``) or a full path with extension
+        (saved verbatim, no directory needed). For individual saves the
+        ``{x}_vs_{y}`` name is substituted into the stem so each file stays
+        distinct; the subplot grid uses a single name. If None, the auto-
+        generated name is used with the directory paths.
+
     save_plots : str, optional
         Controls which plots to save: "all", "individual", or "subplots".
-        If None, plots will not be saved.
+        If None but an output target (`image_path_png`, `image_path_svg`, or
+        `image_filename`) is provided, defaults to "subplots". If None with no
+        target, plots are not saved.
         - "all": Saves both individual and subplots.
         - "individual": Saves each scatter plot separately with a progress bar
           (powered by `tqdm`) to track saving progress.
@@ -2219,8 +2301,8 @@ def scatter_fit_plot(
         If `save_plots` is not one of [None, "all", "individual", "subplots"].
 
     ValueError
-        If `save_plots` is set without specifying either `image_path_png` or
-        `image_path_svg`.
+        If `save_plots` is set (or a save target is implied) without any of
+        `image_path_png`, `image_path_svg`, or `image_filename`.
 
     ValueError
         If `rotate_plot` is not a boolean value.
@@ -2330,9 +2412,16 @@ def scatter_fit_plot(
             "'individual', 'subplots', or None."
         )
 
-    # Check if save_plots is set without image paths
-    if save_plots and not (image_path_png or image_path_svg):
-        raise ValueError("To save plots, specify `image_path_png` or `image_path_svg`.")
+    # If an output target is supplied but save_plots wasn't, default to subplots
+    if save_plots is None and (image_path_png or image_path_svg or image_filename):
+        save_plots = "subplots"
+
+    # Check if save_plots is set without any output target
+    if save_plots and not (image_path_png or image_path_svg or image_filename):
+        raise ValueError(
+            "To save plots, specify `image_path_png`, `image_path_svg`, "
+            "or `image_filename`."
+        )
 
     # Validate the rotate_plot input
     if not isinstance(rotate_plot, bool):
@@ -2440,6 +2529,7 @@ def scatter_fit_plot(
             )
             ax.tick_params(axis="x", rotation=xlabel_rot)
             ax.tick_params(axis="both", labelsize=tick_fontsize)
+            _apply_thousands(ax)
 
             # Apply xlim and ylim if provided
             if xlim:
@@ -2523,6 +2613,7 @@ def scatter_fit_plot(
                 )
                 ax.tick_params(axis="x", rotation=xlabel_rot)
                 ax.tick_params(axis="both", labelsize=tick_fontsize)
+                _apply_thousands(ax)
 
                 # Apply xlim and ylim if provided
                 if xlim:
@@ -2558,6 +2649,8 @@ def scatter_fit_plot(
                 )
 
                 if add_best_fit_line:
+                    x_data = df[x_var] if not rotate_plot else df[y_var]
+                    y_data = df[y_var] if not rotate_plot else df[x_var]
                     _add_best_fit(
                         ax=ax,
                         x=x_data,
@@ -2574,25 +2667,20 @@ def scatter_fit_plot(
                 )
                 ax.tick_params(axis="x", rotation=xlabel_rot)
                 ax.tick_params(axis="both", labelsize=tick_fontsize)
+                _apply_thousands(ax)
 
                 safe_x_var = x_var.replace(" ", "_").replace("/", "_per_")
                 safe_y_var = y_var.replace(" ", "_").replace("/", "_per_")
-                if image_path_png:
-                    fig_individual.savefig(
-                        os.path.join(
-                            image_path_png,
-                            f"scatter_{safe_x_var}_vs_{safe_y_var}.png",
-                        ),
-                        bbox_inches="tight",
-                    )
-                if image_path_svg:
-                    fig_individual.savefig(
-                        os.path.join(
-                            image_path_svg,
-                            f"scatter_{safe_x_var}_vs_{safe_y_var}.svg",
-                        ),
-                        bbox_inches="tight",
-                    )
+                _save_figure(
+                    fig=fig_individual,
+                    image_path_png=image_path_png,
+                    image_path_svg=image_path_svg,
+                    image_filename=_resolve_save_name(
+                        image_filename,
+                        f"scatter_{safe_x_var}_vs_{safe_y_var}",
+                        multi=True,
+                    ),
+                )
                 plt.close(fig_individual)  # Clear memory
                 pbar.update(1)  # Update progress bar
 
@@ -2646,24 +2734,19 @@ def scatter_fit_plot(
                 )
                 ax.tick_params(axis="x", rotation=xlabel_rot)
                 ax.tick_params(axis="both", labelsize=tick_fontsize)
+                _apply_thousands(ax)
             else:
                 ax.axis("off")  # Turn off unused axes
 
         plt.tight_layout()
 
         # Save the subplots without a progress bar
-        subplots_filename_png = "scatter_plots_subplots.png"
-        subplots_filename_svg = "scatter_plots_subplots.svg"
-        if image_path_png:
-            fig_grid.savefig(
-                os.path.join(image_path_png, subplots_filename_png),
-                bbox_inches="tight",
-            )
-        if image_path_svg:
-            fig_grid.savefig(
-                os.path.join(image_path_svg, subplots_filename_svg),
-                bbox_inches="tight",
-            )
+        _save_figure(
+            fig=fig_grid,
+            image_path_png=image_path_png,
+            image_path_svg=image_path_svg,
+            image_filename=_resolve_save_name(image_filename, "scatter_plots_subplots"),
+        )
 
         plt.close(fig_grid)  # Clear memory
 
@@ -2671,6 +2754,7 @@ def scatter_fit_plot(
 ################################################################################
 ######################### Correlation Matrices #################################
 ################################################################################
+
 
 def flex_corr_matrix(
     df: pd.DataFrame,
@@ -2941,12 +3025,15 @@ def flex_corr_matrix(
         )
 
     # Validate paths are specified if image_filename is provided
-    if image_filename is not None and not (image_path_png or image_path_svg):
+    if (
+        image_filename is not None
+        and not os.path.splitext(image_filename)[1]
+        and not (image_path_png or image_path_svg)
+    ):
         raise ValueError(
-            "You must specify `image_path_png` or `image_path_svg` "
-            "when `image_filename` is provided."
+            "You must specify `image_path_png` or `image_path_svg` when "
+            "`image_filename` has no file extension."
         )
-
     # Filter DataFrame if cols are specified
     if cols is not None:
         df = df[cols]
@@ -3044,7 +3131,9 @@ def flex_corr_matrix(
                     elif not pd.isna(p) and p >= significance_level:
                         annot_data.loc[col_i, col_j] = ""
                     else:
-                        annot_data.loc[col_i, col_j] = f"{corr_matrix.loc[col_i, col_j]:.2f}"
+                        annot_data.loc[col_i, col_j] = (
+                            f"{corr_matrix.loc[col_i, col_j]:.2f}"
+                        )
             annot_arg = annot_data
             fmt_arg = ""
     else:
@@ -3194,6 +3283,7 @@ def flex_corr_matrix(
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
             filename=image_filename,
+            image_filename=image_filename,
         )
 
     # Legacy save_plots path — derives filename from title
@@ -3205,6 +3295,7 @@ def flex_corr_matrix(
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
             filename=safe_title,
+            image_filename=image_filename,
         )
 
     plt.show()
@@ -3250,8 +3341,9 @@ def data_doctor(
     specified.
 
     Plots are displayed by default. If `image_filename` is provided, the figure
-    is saved as PNG and/or SVG depending on which output directories are supplied
-    via `image_path_png` and/or `image_path_svg`.
+    is saved: with an extension it is written verbatim to that path (no
+    directory needed); without one it is combined with `image_path_png` and/or
+    `image_path_svg`.
 
     Parameters
     ----------
@@ -3328,16 +3420,18 @@ def data_doctor(
     box_violin_ylim : tuple of (float, float), optional
         Limits for the boxplot or violin plot y-axis.
 
-    image_filename : str, optional
-        Base filename (without extension) used when saving plots. If provided,
-        the figure is saved to disk using the directories specified by
-        `image_path_png` and/or `image_path_svg`.
-
     image_path_png : str, optional
         Directory path used to save a PNG version of the figure.
 
     image_path_svg : str, optional
         Directory path used to save an SVG version of the figure.
+
+    image_filename : str, optional
+        Filename used when saving the figure. May be a full path with extension
+        (saved verbatim, no directory required) or a bare stem combined with
+        `image_path_png` / `image_path_svg`. The feature name, transformation,
+        plot types, and cutoff flag are encoded into the auto-generated name
+        when a stem (or no name) is used. If None, the figure is not saved.
 
     apply_as_new_col_to_df : bool, optional (default=False)
         Whether to add the transformed feature back to the DataFrame as a new
@@ -3383,8 +3477,8 @@ def data_doctor(
         If an invalid `plot_type` or `box_violin` option is provided.
 
     ValueError
-        If `image_filename` is provided but neither `image_path_png` nor
-        `image_path_svg` is specified.
+        If `image_filename` is provided without an extension and neither
+        `image_path_png` nor `image_path_svg` is specified.
 
     ValueError
         If the length of the transformed data does not match the original
@@ -3394,11 +3488,13 @@ def data_doctor(
     -----
     - Saving is filename-driven: plots are written only when
     `image_filename` is provided.
-    - File extensions are handled internally; users supply directory paths
-    and a filename stem only.
+    - A full-path `image_filename` (with extension) is saved verbatim with no
+    directory required; a bare stem is combined with the provided directories.
     - Output filenames encode the feature name, transformation, plot types,
     and whether cutoffs were applied.
     - Cutoff values, when used, are displayed beneath the plots for clarity.
+    - The histogram count (y) axis uses thousands separators. The x-axis keeps
+    scientific notation for values at or above 100,000.
     """
 
     # Suppress warnings for division by zero, or invalid values in subtract
@@ -3847,6 +3943,9 @@ def data_doctor(
                 ax.set_xlabel(f"{feature_name}", fontsize=label_fontsize)
                 ax.set_ylabel("Count", fontsize=label_fontsize)
                 ax.tick_params(axis="both", labelsize=tick_fontsize)
+                ax.yaxis.set_major_formatter(
+                    plt.FuncFormatter(lambda v, _: f"{v:,.0f}")
+                )
                 if xlim:
                     ax.set_xlim(xlim)
                 if hist_ylim:
@@ -3936,8 +4035,9 @@ def data_doctor(
                         va="center",
                         transform=ax.transAxes,
                     )
+                    kind_label = "Boxplot" if box_violin == "boxplot" else "Violinplot"
                     ax.set_title(
-                        f"{'Boxplot' if box_violin == 'boxplot' else 'Violinplot'}: {feature_name} (Scale: {scale_conversion})",
+                        f"{kind_label}: {feature_name} " f"(Scale: {scale_conversion})",
                         fontsize=label_fontsize,
                         pad=25,
                     )
@@ -4025,36 +4125,36 @@ def data_doctor(
             f"Valid options are 'boxplot' or 'violinplot'."
         )
 
-    if image_filename and not (image_path_png or image_path_svg):
+    if (
+        image_filename
+        and not os.path.splitext(image_filename)[1]
+        and not (image_path_png or image_path_svg)
+    ):
         raise ValueError(
             "You must provide either 'image_path_png' or 'image_path_svg' "
-            "when 'image_filename' is provided."
+            "when 'image_filename' has no file extension."
         )
 
     # ------------------------------------------------------------------
     # Save figure (optional)
     # ------------------------------------------------------------------
-    if image_filename and (image_path_png or image_path_svg):
+    if image_path_png or image_path_svg or image_filename:
         # Adjust plot_type for custom labeling of boxplot or violinplot
         adjusted_plot_type = [
             box_violin if ptype == "box_violin" else ptype for ptype in plot_type
         ]
-
         plot_type_str = "_".join(adjusted_plot_type)
-
         cutoff_str = "_cutoff" if apply_cutoff else ""
-
-        filename = (
+        auto_name = (
             f"{feature_name}_"
             f"{scale_conversion if scale_conversion else 'original'}_"
             f"{plot_type_str}{cutoff_str}"
         )
-
         _save_figure(
             fig=fig,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
-            filename=filename,
+            image_filename=_resolve_save_name(image_filename, auto_name),
         )
 
 
@@ -4083,6 +4183,7 @@ def outcome_crosstab_plot(
     save_plots: bool = False,
     image_path_png: Optional[str] = None,
     image_path_svg: Optional[str] = None,
+    image_filename: Optional[str] = None,
     string: Optional[str] = None,
 ) -> None:
     """
@@ -4108,11 +4209,36 @@ def outcome_crosstab_plot(
     - normalize: bool, False for raw counts, True for normalized proportions.
     - show_value_counts: bool, append counts or percentages to legend entries.
     - color_schema: None, list, or dict for color customization.
-    - save_plots: bool, save figures if True.
-    - image_path_png, image_path_svg: str paths for saving.
-    - string: base filename for saving (sanitized).
+    - save_plots: bool, save via the legacy `string`/directory scheme if True.
+      Ignored when `image_filename` is given.
+    - image_path_png, image_path_svg: str, directory paths for saving. Required
+      with `save_plots`, or with a bare-stem `image_filename`.
+    - image_filename: str, optional destination. With an extension it is saved
+      verbatim (no directory needed); without one it is combined with
+      `image_path_png` / `image_path_svg`. Takes precedence over `save_plots`.
+    - string: base filename (sanitized: spaces to underscores, colons removed,
+      lowercased) for the legacy `save_plots` path. Defaults to
+      "crosstab_plot".
+
+    Raises:
+        - ValueError: if `image_filename` is provided without an extension and
+        neither `image_path_png` nor `image_path_svg` is specified.
+
+    Notes:
+        - The count (y) axis and legend counts use thousands separators; the
+        normalized axis and legend use whole-number percentages.
     """
     n_vars = len(list_name)
+
+    if (
+        image_filename is not None
+        and not os.path.splitext(image_filename)[1]
+        and not (image_path_png or image_path_svg)
+    ):
+        raise ValueError(
+            "You must specify `image_path_png` or `image_path_svg` when "
+            "`image_filename` has no file extension."
+        )
 
     # Determine grid size
     if n_rows is None and n_cols is None:
@@ -4134,6 +4260,7 @@ def outcome_crosstab_plot(
         # Compute crosstab
         if not normalize:
             ylabel = "Count"
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:,.0f}"))
             ctab = pd.crosstab(df[outcome], df[item])
         else:
             ylabel = "Percentage"
@@ -4172,7 +4299,7 @@ def outcome_crosstab_plot(
             if not normalize:
                 counts = df[item].value_counts()
                 labels = [
-                    f"{lbl} (n={counts.get(col, 0)})"
+                    f"{lbl} (n={counts.get(col, 0):,})"
                     for lbl, col in zip(labels, ctab.columns)
                 ]
             else:
@@ -4201,7 +4328,15 @@ def outcome_crosstab_plot(
     plt.tight_layout(w_pad=w_pad, h_pad=h_pad)
 
     # Save logic
-    if save_plots:
+    if image_filename is not None:
+        _save_figure(
+            fig=fig,
+            image_path_png=image_path_png,
+            image_path_svg=image_path_svg,
+            image_filename=image_filename,
+        )
+
+    elif save_plots:
         base = string or "crosstab_plot"
         safe = base.replace(" ", "_").replace(":", "").lower()
         if image_path_png:
@@ -4340,7 +4475,9 @@ def distribution_gof_plots(
         Directory path for saving SVG output.
 
     image_filename : str, optional
-        Base filename used when saving plots (without extension).
+        Filename used when saving. With an extension it is saved verbatim (no
+        directory required); without one it is combined with `image_path_png` /
+        `image_path_svg`.
 
 
     Returns
@@ -4357,8 +4494,8 @@ def distribution_gof_plots(
         If `qq_type="empirical"` is used without valid `reference_data`.
 
     ValueError
-        If `image_filename` is provided but neither `image_path_png` nor
-        `image_path_svg` is specified.
+        If `image_filename` is provided without an extension and neither
+        `image_path_png` nor `image_path_svg` is specified.
 
     Notes
     -----
@@ -4409,11 +4546,11 @@ def distribution_gof_plots(
         if len(reference_data) < 2:
             raise ValueError("reference_data must contain at least 2 observations")
 
-    if image_filename:
+    if image_filename and not os.path.splitext(image_filename)[1]:
         if not (image_path_png or image_path_svg):
             raise ValueError(
                 "You must provide either 'image_path_png' or 'image_path_svg' "
-                "when 'image_filename' is provided."
+                "when 'image_filename' has no file extension."
             )
 
     # -------------------------
@@ -4497,12 +4634,13 @@ def distribution_gof_plots(
     # -------------------------
     plt.tight_layout()
 
-    if image_filename and (image_path_png or image_path_svg):
+    if image_path_png or image_path_svg or image_filename:
         _save_figure(
             fig=fig,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
             filename=image_filename,
+            image_filename=image_filename,
         )
 
     plt.show()
@@ -4511,6 +4649,7 @@ def distribution_gof_plots(
 ################################################################################
 ######################### Grouped Distributions Function #######################
 ################################################################################
+
 
 def grouped_distributions(
     df: pd.DataFrame,
@@ -4681,8 +4820,10 @@ def grouped_distributions(
         Directory path to save the SVG image.
 
     image_filename : str, optional
-        Base filename (without extension) for saving the figure. No files
-        are saved if this is not provided.
+        Filename for saving the figure. With an extension it is saved verbatim
+        (no directory required); without one it is combined with
+        ``image_path_png`` / ``image_path_svg``. No files are saved if this is
+        not provided.
 
     Returns
     -------
@@ -4693,8 +4834,8 @@ def grouped_distributions(
     ValueError
         If the ``by`` column is not binary.
         If an invalid ``plot_style`` or ``normalize`` option is provided.
-        If ``image_filename`` is provided but neither ``image_path_png`` nor
-        ``image_path_svg`` is specified.
+        If ``image_filename`` is provided without an extension and neither
+        ``image_path_png`` nor ``image_path_svg`` is specified.
         If the subplot grid is too small for the number of features.
 
     Warnings
@@ -4714,15 +4855,22 @@ def grouped_distributions(
     - To place the legend below a subplot, use
       ``legend_loc="upper center"``, ``legend_bbox_to_anchor=(0.5, -0.15)``,
       and ``legend_ncols=2``.
+    - In count mode (``normalize="count"``), the count (y) axis uses thousands
+      separators. In density/percentage mode the y-axis shows whole-number
+      percentages when ``pct_format=True``.
     """
 
     # ------------------------------------------------------------------
     # Validation
     # ------------------------------------------------------------------
-    if image_filename and not (image_path_png or image_path_svg):
+    if (
+        image_filename
+        and not os.path.splitext(image_filename)[1]
+        and not (image_path_png or image_path_svg)
+    ):
         raise ValueError(
             "You must provide either 'image_path_png' or 'image_path_svg' "
-            "when 'image_filename' is provided."
+            "when 'image_filename' has no file extension."
         )
 
     if by not in df.columns:
@@ -4730,9 +4878,7 @@ def grouped_distributions(
 
     unique_vals = df[by].dropna().unique()
     if len(unique_vals) != 2:
-        raise ValueError(
-            f"Column '{by}' must be binary. Found values: {unique_vals}"
-        )
+        raise ValueError(f"Column '{by}' must be binary. Found values: {unique_vals}")
 
     if plot_style not in {"hist", "density"}:
         raise ValueError("plot_style must be 'hist' or 'density'.")
@@ -4868,6 +5014,7 @@ def grouped_distributions(
             )
         else:
             ax.set_ylabel("Count", fontsize=label_fontsize)
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:,.0f}"))
 
         ax.tick_params(axis="both", labelsize=tick_fontsize)
 
@@ -4897,9 +5044,7 @@ def grouped_distributions(
         # Percentage formatter
         # -----------------------
         if pct_format and (plot_style == "density" or normalize == "density"):
-            ax.yaxis.set_major_formatter(
-                FuncFormatter(lambda x, _: f"{x * 100:.0f}%")
-            )
+            ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x * 100:.0f}%"))
 
         # -----------------------
         # Axis limits
@@ -4923,12 +5068,13 @@ def grouped_distributions(
     # ------------------------------------------------------------------
     # Save
     # ------------------------------------------------------------------
-    if image_path_png or image_path_svg:
+    if image_path_png or image_path_svg or image_filename:
         _save_figure(
             fig=fig,
             image_path_png=image_path_png,
             image_path_svg=image_path_svg,
             filename=image_filename,
+            image_filename=image_filename,
             bbox_inches=bbox_inches,
             dpi=dpi,
         )

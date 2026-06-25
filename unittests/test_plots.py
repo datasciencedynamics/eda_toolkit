@@ -44,6 +44,7 @@ def sample_corr_dataframe():
         }
     )
 
+
 @pytest.fixture
 def sample_scatter_dataframe():
     np.random.seed(42)
@@ -119,10 +120,12 @@ def gof_df():
         }
     )
 
+
 @pytest.fixture
 def reference_data():
     rng = np.random.default_rng(999)
     return rng.normal(size=200)
+
 
 @pytest.fixture
 def sample_corr_dataframe_large():
@@ -133,9 +136,9 @@ def sample_corr_dataframe_large():
     return pd.DataFrame(
         {
             "A": x1,
-            "B": x1 * 0.9 + np.random.randn(n) * 0.1,   # strongly correlated
-            "C": np.random.randn(n),                        # uncorrelated
-            "D": x1 * -0.8 + np.random.randn(n) * 0.2,   # strongly negatively correlated
+            "B": x1 * 0.9 + np.random.randn(n) * 0.1,  # strongly correlated
+            "C": np.random.randn(n),  # uncorrelated
+            "D": x1 * -0.8 + np.random.randn(n) * 0.2,  # strongly negatively correlated
         }
     )
 
@@ -798,42 +801,43 @@ def test_flex_corr_matrix_save_plot(sample_corr_dataframe, tmp_path):
 # ------------------------------------------------------------------
 # Basic smoke tests
 # ------------------------------------------------------------------
- 
+
+
 def test_flex_corr_matrix_no_colorbar(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, show_colorbar=False)
- 
- 
+
+
 def test_flex_corr_matrix_full_matrix(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, triangular=False)
- 
- 
+
+
 def test_flex_corr_matrix_with_title(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, title="Test Title")
- 
- 
+
+
 def test_flex_corr_matrix_custom_figsize(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, figsize=(6, 6))
- 
- 
+
+
 def test_flex_corr_matrix_label_names(sample_corr_dataframe):
     flex_corr_matrix(
         sample_corr_dataframe,
         label_names={"Feature1": "F1", "Feature2": "F2", "Feature3": "F3"},
     )
- 
- 
+
+
 def test_flex_corr_matrix_no_annot(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, annot=False)
- 
- 
+
+
 def test_flex_corr_matrix_custom_cmap(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, cmap="viridis")
- 
- 
+
+
 def test_flex_corr_matrix_xlabel_rotation(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, xlabel_rot=90)
- 
- 
+
+
 def test_flex_corr_matrix_image_filename(sample_corr_dataframe, tmp_path):
     flex_corr_matrix(
         sample_corr_dataframe,
@@ -841,8 +845,8 @@ def test_flex_corr_matrix_image_filename(sample_corr_dataframe, tmp_path):
         image_path_png=str(tmp_path),
     )
     assert any(f.endswith(".png") for f in os.listdir(tmp_path))
- 
- 
+
+
 def test_flex_corr_matrix_image_filename_svg(sample_corr_dataframe, tmp_path):
     flex_corr_matrix(
         sample_corr_dataframe,
@@ -850,45 +854,47 @@ def test_flex_corr_matrix_image_filename_svg(sample_corr_dataframe, tmp_path):
         image_path_svg=str(tmp_path),
     )
     assert any(f.endswith(".svg") for f in os.listdir(tmp_path))
- 
- 
+
+
 # ------------------------------------------------------------------
 # corr_method
 # ------------------------------------------------------------------
- 
+
+
 def test_flex_corr_matrix_spearman(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, corr_method="spearman")
- 
- 
+
+
 def test_flex_corr_matrix_kendall(sample_corr_dataframe):
     flex_corr_matrix(sample_corr_dataframe, corr_method="kendall")
- 
- 
+
+
 def test_flex_corr_matrix_invalid_corr_method(sample_corr_dataframe):
     with pytest.raises(ValueError, match="Invalid `corr_method`"):
         flex_corr_matrix(sample_corr_dataframe, corr_method="invalid")
- 
- 
+
+
 # ------------------------------------------------------------------
 # Significance overlay
 # ------------------------------------------------------------------
- 
+
+
 def test_flex_corr_matrix_show_significance_stars(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
         show_significance=True,
         significance_method="stars",
     )
- 
- 
+
+
 def test_flex_corr_matrix_show_significance_mask(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
         show_significance=True,
         significance_method="mask",
     )
- 
- 
+
+
 def test_flex_corr_matrix_invalid_significance_method(sample_corr_dataframe):
     with pytest.raises(ValueError, match="Invalid `significance_method`"):
         flex_corr_matrix(
@@ -896,8 +902,8 @@ def test_flex_corr_matrix_invalid_significance_method(sample_corr_dataframe):
             show_significance=True,
             significance_method="pvalues",
         )
- 
- 
+
+
 def test_flex_corr_matrix_significance_level_strict(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
@@ -905,8 +911,8 @@ def test_flex_corr_matrix_significance_level_strict(sample_corr_dataframe_large)
         significance_level=0.01,
         significance_method="stars",
     )
- 
- 
+
+
 def test_flex_corr_matrix_significance_legend_x(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
@@ -914,8 +920,8 @@ def test_flex_corr_matrix_significance_legend_x(sample_corr_dataframe_large):
         significance_method="stars",
         significance_legend_x=0.3,
     )
- 
- 
+
+
 def test_flex_corr_matrix_spearman_significance(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
@@ -923,8 +929,8 @@ def test_flex_corr_matrix_spearman_significance(sample_corr_dataframe_large):
         show_significance=True,
         significance_method="stars",
     )
- 
- 
+
+
 def test_flex_corr_matrix_kendall_significance(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
@@ -932,26 +938,27 @@ def test_flex_corr_matrix_kendall_significance(sample_corr_dataframe_large):
         show_significance=True,
         significance_method="mask",
     )
- 
- 
+
+
 # ------------------------------------------------------------------
 # filter_significance
 # ------------------------------------------------------------------
- 
+
+
 def test_flex_corr_matrix_filter_significance(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
         filter_significance=0.05,
     )
- 
- 
+
+
 def test_flex_corr_matrix_filter_significance_strict(sample_corr_dataframe_large):
     flex_corr_matrix(
         sample_corr_dataframe_large,
         filter_significance=0.001,
     )
- 
- 
+
+
 def test_flex_corr_matrix_filter_significance_auto_enables_show_significance(
     sample_corr_dataframe_large,
 ):
@@ -964,62 +971,70 @@ def test_flex_corr_matrix_filter_significance_auto_enables_show_significance(
         )
     except Exception as e:
         pytest.fail(f"filter_significance failed to auto-enable significance: {e}")
- 
- 
+
+
 def test_flex_corr_matrix_filter_significance_invalid(sample_corr_dataframe):
     with pytest.raises(ValueError, match="`filter_significance`"):
         flex_corr_matrix(
             sample_corr_dataframe,
             filter_significance=-0.05,
         )
- 
- 
+
+
 def test_flex_corr_matrix_filter_significance_invalid_type(sample_corr_dataframe):
     with pytest.raises((ValueError, TypeError)):
         flex_corr_matrix(
             sample_corr_dataframe,
             filter_significance="0.05",
         )
- 
- 
+
+
 # ------------------------------------------------------------------
 # Validation errors
 # ------------------------------------------------------------------
- 
+
+
 def test_flex_corr_matrix_invalid_annot(sample_corr_dataframe):
     with pytest.raises(ValueError, match="Invalid value for `annot`"):
         flex_corr_matrix(sample_corr_dataframe, annot="yes")
- 
- 
+
+
 def test_flex_corr_matrix_invalid_save_plots(sample_corr_dataframe):
     with pytest.raises(ValueError, match="Invalid `save_plots`"):
         flex_corr_matrix(sample_corr_dataframe, save_plots="yes")
- 
- 
+
+
 def test_flex_corr_matrix_invalid_triangular(sample_corr_dataframe):
     with pytest.raises(ValueError, match="Invalid `triangular`"):
         flex_corr_matrix(sample_corr_dataframe, triangular="yes")
- 
- 
+
+
 def test_flex_corr_matrix_invalid_cols_type(sample_corr_dataframe):
     with pytest.raises(ValueError, match="`cols` parameter must be a list"):
         flex_corr_matrix(sample_corr_dataframe, cols="Feature1")
- 
- 
+
+
 def test_flex_corr_matrix_save_plots_without_path(sample_corr_dataframe):
-    with pytest.raises(ValueError, match="image_path_png.*image_path_svg|image_path_svg.*image_path_png|specify"):
+    with pytest.raises(
+        ValueError,
+        match="image_path_png.*image_path_svg|image_path_svg.*image_path_png|specify",
+    ):
         flex_corr_matrix(sample_corr_dataframe, save_plots=True)
- 
- 
+
+
 def test_flex_corr_matrix_image_filename_without_path(sample_corr_dataframe):
-    with pytest.raises(ValueError, match="image_path_png.*image_path_svg|image_path_svg.*image_path_png|specify"):
+    with pytest.raises(
+        ValueError,
+        match="image_path_png.*image_path_svg|image_path_svg.*image_path_png|specify",
+    ):
         flex_corr_matrix(sample_corr_dataframe, image_filename="test")
- 
- 
+
+
 ################################################################################
 # Near-zero artifact
 ################################################################################
- 
+
+
 def test_flex_corr_matrix_no_negative_zero(sample_corr_dataframe_large, tmp_path):
     """Verify that near-zero values don't produce -0.00 in the heatmap."""
     # The fixture has uncorrelated columns — some cells will be near zero
@@ -1156,7 +1171,8 @@ def test_scatter_fit_plot_invalid_rotate_plot(sample_scatter_dataframe):
 
 def test_scatter_fit_plot_save_without_path(sample_scatter_dataframe):
     with pytest.raises(
-        ValueError, match="To save plots, specify `image_path_png` or `image_path_svg`."
+        ValueError,
+        match=r"To save plots, specify `image_path_png`, `image_path_svg`, or `image_filename`\.",
     ):
         scatter_fit_plot(
             sample_scatter_dataframe,
@@ -1399,6 +1415,7 @@ def test_box_violin_plot_invalid_show_plot(sample_box_violin_dataframe):
             show_plot="invalid_option",
         )
 
+
 # Test that `image_filename` without a path raises an error
 def test_box_violin_plot_invalid_save_plots(sample_box_violin_dataframe):
     with pytest.raises(ValueError, match="image_filename"):
@@ -1412,13 +1429,17 @@ def test_box_violin_plot_invalid_save_plots(sample_box_violin_dataframe):
 
 # Test that `image_filename` requires `image_path_png` or `image_path_svg`
 def test_box_violin_plot_missing_image_path(sample_box_violin_dataframe):
-    with pytest.raises(ValueError, match="image_path_png.*image_path_svg|image_path_svg.*image_path_png"):
+    with pytest.raises(
+        ValueError,
+        match="image_path_png.*image_path_svg|image_path_svg.*image_path_png",
+    ):
         box_violin_plot(
             sample_box_violin_dataframe,
             metrics_list=["Metric1"],
             metrics_comp=["Category"],
             image_filename="test_output",  # Should fail since no path is provided
         )
+
 
 # Test that `rotate_plot` must be a boolean value
 def test_box_violin_plot_invalid_rotate_plot(sample_box_violin_dataframe):
@@ -1959,3 +1980,88 @@ def test_distribution_gof_calls_save_figure(gof_df, tmp_path):
         )
 
         mock_save.assert_called_once()
+
+
+# --- single-file functions: full path, no directory, saved verbatim --------
+
+
+def test_flex_corr_matrix_full_path(sample_corr_dataframe, tmp_path):
+    target = tmp_path / "corr.png"
+    flex_corr_matrix(sample_corr_dataframe, image_filename=str(target))
+    assert target.exists()
+
+
+def test_data_doctor_full_path(sample_dataframe_values, tmp_path):
+    target = tmp_path / "dd.png"
+    data_doctor(sample_dataframe_values, "values", image_filename=str(target))
+    assert target.exists()
+
+
+def test_distribution_gof_full_path(gof_df, tmp_path):
+    target = tmp_path / "gof.png"
+    distribution_gof_plots(df=gof_df, var="x", image_filename=str(target))
+    assert target.exists()
+
+
+def test_grouped_distributions_full_path(binary_df, tmp_path):
+    target = tmp_path / "gd.png"
+    grouped_distributions(
+        df=binary_df, features=["x1"], by="group", image_filename=str(target)
+    )
+    assert target.exists()
+
+
+def test_outcome_crosstab_full_path(tmp_path):
+    df = pd.DataFrame(
+        {"sex": ["M", "F", "F", "M", "M", "F"], "outcome": [1, 0, 1, 0, 1, 0]}
+    )
+    target = tmp_path / "oc.png"
+    outcome_crosstab_plot(
+        df=df, list_name=["sex"], outcome="outcome", image_filename=str(target)
+    )
+    assert target.exists()
+    plt.close("all")
+
+
+def test_stacked_crosstab_image_filename_full_path(sample_crosstab_dataframe, tmp_path):
+    stacked_crosstab_plot(
+        df=sample_crosstab_dataframe,
+        col="Category",
+        func_col=["Group"],
+        legend_labels_list=[["X", "Y"]],
+        title=["Full Path"],
+        image_filename=str(tmp_path / "st.png"),
+    )
+    assert any(f.endswith(".png") for f in os.listdir(tmp_path))
+
+
+# --- fan-out functions: full path, extension stays intact (regression) ------
+
+
+def test_box_violin_full_path_fanout(sample_box_violin_dataframe, tmp_path):
+    box_violin_plot(
+        sample_box_violin_dataframe,
+        metrics_list=["Metric1", "Metric2"],
+        metrics_comp=["Category"],
+        show_plot="both",
+        image_filename=str(tmp_path / "bv.png"),
+    )
+    files = os.listdir(tmp_path)
+    assert files, "fan-out produced no files"
+    assert all(f.endswith(".png") for f in files)
+    assert not any(".png_" in f for f in files)
+    plt.close("all")
+
+
+def test_scatter_full_path_fanout(sample_scatter_dataframe, tmp_path):
+    scatter_fit_plot(
+        sample_scatter_dataframe,
+        x_vars=["Feature1"],
+        y_vars=["Feature2"],
+        save_plots="all",
+        image_filename=str(tmp_path / "sc.png"),
+    )
+    files = os.listdir(tmp_path)
+    assert any(f.endswith(".png") for f in files)
+    assert not any(".png_" in f for f in files)
+    plt.close("all")
