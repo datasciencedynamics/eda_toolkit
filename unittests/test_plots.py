@@ -1722,8 +1722,7 @@ def test_individual_plot_with_best_fit_and_limits(tmp_path):
 
 def test_grouped_distributions_non_binary_raises(binary_df):
     df = binary_df.copy()
-    df["group"] = [0, 1, 2] * (len(df) // 3)
-
+    df["group"] = np.tile([0, 1, 2], len(df))[: len(df)]
     with pytest.raises(ValueError, match="must be binary"):
         grouped_distributions(
             df=df,
@@ -1732,7 +1731,7 @@ def test_grouped_distributions_non_binary_raises(binary_df):
         )
 
 
-def test_grouped_distributions_non_binary_raises(binary_df):
+def test_grouped_distributions_non_binary_raises_tile(binary_df):
     df = binary_df.copy()
     df["group"] = np.tile([0, 1, 2], len(df))[: len(df)]
     with pytest.raises(ValueError, match="must be binary"):
@@ -2064,4 +2063,104 @@ def test_scatter_full_path_fanout(sample_scatter_dataframe, tmp_path):
     files = os.listdir(tmp_path)
     assert any(f.endswith(".png") for f in files)
     assert not any(".png_" in f for f in files)
+    plt.close("all")
+
+
+# ------------------------------------------------------------------
+# corr_threshold (variable-drop)
+# ------------------------------------------------------------------
+
+
+def test_flex_corr_matrix_corr_threshold_drops_uncorrelated(
+    sample_corr_dataframe_large,
+):
+    """corr_threshold drops variables whose strongest |r| is below it.
+
+    In the fixture A/B/D are strongly correlated and C is noise, so a
+    threshold of 0.5 should drop C and keep A, B, D.
+    """
+    result = flex_corr_matrix(
+        sample_corr_dataframe_large,
+        corr_threshold=0.5,
+        return_corr=True,
+    )
+    assert "C" not in result.columns
+    assert set(result.columns) == {"A", "B", "D"}
+
+
+def test_flex_corr_matrix_corr_threshold_no_survivors_raises(
+    sample_corr_dataframe_large,
+):
+    """A threshold no pair can meet raises rather than drawing an empty plot."""
+    with pytest.raises(ValueError, match="No variables have an absolute correlation"):
+        flex_corr_matrix(sample_corr_dataframe_large, corr_threshold=0.999)
+
+
+def test_flex_corr_matrix_corr_threshold_invalid(sample_corr_dataframe):
+    with pytest.raises(ValueError, match="`corr_threshold` must be"):
+        flex_corr_matrix(sample_corr_dataframe, corr_threshold=1.5)
+
+
+# ------------------------------------------------------------------
+# return_corr
+# ------------------------------------------------------------------
+
+
+def test_flex_corr_matrix_return_corr_true(sample_corr_dataframe):
+    """return_corr=True returns the plotted matrix as a square DataFrame."""
+    result = flex_corr_matrix(sample_corr_dataframe, return_corr=True)
+    assert isinstance(result, pd.DataFrame)
+    assert result.shape[0] == result.shape[1]
+    # full square, not triangular-masked
+    assert result.notna().all().all()
+
+
+def test_flex_corr_matrix_return_corr_false_returns_none(sample_corr_dataframe):
+    """Default return_corr=False preserves the old None return."""
+    result = flex_corr_matrix(sample_corr_dataframe, return_corr=False)
+    assert result is None
+
+
+def test_flex_corr_matrix_return_corr_reflects_threshold(
+    sample_corr_dataframe_large,
+):
+    """The returned matrix reflects corr_threshold filtering."""
+    result = flex_corr_matrix(
+        sample_corr_dataframe_large,
+        corr_threshold=0.5,
+        return_corr=True,
+    )
+    assert "C" not in result.columns
+
+
+# ------------------------------------------------------------------
+# show_plot gate (only active with return_corr=True)
+# ------------------------------------------------------------------
+
+
+def test_flex_corr_matrix_return_corr_suppresses_plot(sample_corr_dataframe):
+    """return_corr=True with default show_plot=False returns data and draws no figure."""
+    plt.close("all")
+    result = flex_corr_matrix(sample_corr_dataframe, return_corr=True)
+    assert isinstance(result, pd.DataFrame)
+    assert (
+        len(plt.get_fignums()) == 0
+    ), "No figure should be drawn when show_plot=False."
+
+
+def test_flex_corr_matrix_return_corr_with_show_plot_draws(sample_corr_dataframe):
+    """return_corr=True with show_plot=True returns data AND draws the figure."""
+    plt.close("all")
+    result = flex_corr_matrix(sample_corr_dataframe, return_corr=True, show_plot=True)
+    assert isinstance(result, pd.DataFrame)
+    assert len(plt.get_fignums()) > 0, "A figure should be drawn when show_plot=True."
+    plt.close("all")
+
+
+def test_flex_corr_matrix_show_plot_ignored_without_return_corr(sample_corr_dataframe):
+    """show_plot has no effect when return_corr=False: still plots, still returns None."""
+    plt.close("all")
+    result = flex_corr_matrix(sample_corr_dataframe, show_plot=False)
+    assert result is None
+    assert len(plt.get_fignums()) > 0, "Plot should still draw when return_corr=False."
     plt.close("all")

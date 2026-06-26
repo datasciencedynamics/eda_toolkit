@@ -2788,8 +2788,11 @@ def flex_corr_matrix(
     significance_method: str = "stars",
     significance_legend_x: float = 0.5,
     filter_significance: Optional[float] = None,
+    corr_threshold: Optional[float] = None,
+    return_corr: bool = False,
+    show_plot: bool = False,
     **kwargs: Dict[str, Any],
-) -> None:
+) -> Optional[pd.DataFrame]:
     """
     Creates a correlation heatmap with extensive customization options, including
     triangular masking, alignment adjustments, title wrapping, dynamic colorbar
@@ -2920,14 +2923,36 @@ def flex_corr_matrix(
         When set, ``show_significance`` is automatically enabled so the
         significance overlay is always visible alongside the filtered matrix.
 
+    corr_threshold : float or None, optional (default=None)
+        If provided, drops any variable whose strongest off-diagonal absolute
+        correlation is below this value, so only features that correlate with
+        at least one other feature at or above the threshold remain in the
+        matrix. This filters *variables*, not individual cells: a surviving
+        variable still displays its weaker correlations (including values
+        below the threshold) against the other survivors. Must be in [0, 1]
+        (e.g. 0.3). Raises if no variable qualifies.
+
+    return_corr : bool, optional (default=False)
+        If True, returns the correlation matrix (as plotted, after any
+        `corr_threshold` / `filter_significance` filtering) as a DataFrame. By
+        default this also suppresses the heatmap; pass `show_plot=True` to
+        render it as well. If False, returns None and always plots.
+
+    show_plot : bool, optional (default=False)
+        Only has an effect when `return_corr=True`. By default, requesting the
+        matrix with `return_corr=True` suppresses the heatmap and returns the
+        data only; set `show_plot=True` to also render the plot. When
+        `return_corr=False` the heatmap always displays and this flag is
+        ignored.
+
     **kwargs : dict, optional
         Additional keyword arguments to pass to `sns.heatmap()`.
 
     Returns:
     --------
-    None
-        This function does not return any value but generates and optionally
-        saves a correlation heatmap.
+    pandas.DataFrame or None
+        The (possibly filtered) correlation matrix if `return_corr=True`,
+        otherwise None.
 
     Raises:
     -------
@@ -2954,6 +2979,9 @@ def flex_corr_matrix(
     ValueError
         If `filter_significance` is not None and is not a positive float.
 
+    ValueError
+        If `corr_threshold` is not None and is not a number in [0, 1].
+
     Notes:
     ------
     - If `triangular=True`, the heatmap will display only the upper triangle
@@ -2969,6 +2997,11 @@ def flex_corr_matrix(
       colorbar for a cleaner plot.
     - When `show_significance=True`, the diagonal always displays "1.00" to
       reflect the perfect self-correlation regardless of significance method.
+    - `corr_threshold` removes whole variables, not cells. A kept variable
+      shows all of its correlations against other kept variables, so some
+      displayed values may be below the threshold.
+    - The returned matrix is the full square matrix; the triangular display
+      mask is not applied to it.
     """
 
     # Validation: Ensure annot is a boolean
@@ -3017,6 +3050,14 @@ def flex_corr_matrix(
         # Auto-enable show_significance so p-values are always computed
         show_significance = True
 
+    # Validate corr_threshold
+    if corr_threshold is not None and (
+        not isinstance(corr_threshold, (int, float)) or not 0 <= corr_threshold <= 1
+    ):
+        raise ValueError(
+            "`corr_threshold` must be a number in [0, 1] (e.g. 0.3) or None."
+        )
+
     # Validate paths are specified if save_plots is True
     if save_plots and not (image_path_png or image_path_svg):
         raise ValueError(
@@ -3046,6 +3087,19 @@ def flex_corr_matrix(
 
     # Eliminate -0.00 display artifact by zeroing out near-zero values
     corr_matrix = corr_matrix.where(corr_matrix.abs() >= 0.005, 0.0)
+
+    # Drop variables whose strongest off-diagonal |r| is below the threshold
+    if corr_threshold is not None:
+        _off = corr_matrix.where(~np.eye(len(corr_matrix), dtype=bool))
+        keep = [c for c in corr_matrix.columns if _off[c].abs().max() >= corr_threshold]
+        if not keep:
+            raise ValueError(
+                f"No variables have an absolute correlation >= {corr_threshold}. "
+                "Lower `corr_threshold`."
+            )
+        df_numeric = df_numeric[keep]
+        corr_matrix = df_numeric.corr(method=corr_method)
+        corr_matrix = corr_matrix.where(corr_matrix.abs() >= 0.005, 0.0)
 
     # Compute pairwise p-value matrix if significance is requested
     if show_significance:
@@ -3134,171 +3188,179 @@ def flex_corr_matrix(
                         annot_data.loc[col_i, col_j] = (
                             f"{corr_matrix.loc[col_i, col_j]:.2f}"
                         )
-            annot_arg = annot_data
-            fmt_arg = ""
+
+        annot_arg = annot_data
+        fmt_arg = ""
     else:
         annot_arg = annot
         fmt_arg = ".2f"
 
-    # Set up the matplotlib figure
-    fig, ax_heatmap = plt.subplots(figsize=figsize)
+    # Plot unless the caller is pulling the dataframe and opted out.
+    # When return_corr is False, plotting always happens regardless of show_plot.
+    if not return_corr or show_plot:
 
-    # Draw the heatmap
-    heatmap = sns.heatmap(
-        corr_matrix,
-        mask=mask,
-        cmap=cmap,
-        annot=annot_arg,
-        fmt=fmt_arg,
-        square=True,
-        linewidths=0.5,
-        cbar=False,
-        vmin=vmin,
-        vmax=vmax,
-        annot_kws={"fontsize": label_fontsize},
-        ax=ax_heatmap,
-        **kwargs,
-    )
+        # Set up the matplotlib figure
+        fig, ax_heatmap = plt.subplots(figsize=figsize)
 
-    # Add the colorbar
-    if show_colorbar:
-        divider = make_axes_locatable(ax_heatmap)
-        cax = divider.append_axes(
-            "right", size=f"{cbar_width_ratio*100}%", pad=cbar_padding
+        # Draw the heatmap
+        heatmap = sns.heatmap(
+            corr_matrix,
+            mask=mask,
+            cmap=cmap,
+            annot=annot_arg,
+            fmt=fmt_arg,
+            square=True,
+            linewidths=0.5,
+            cbar=False,
+            vmin=vmin,
+            vmax=vmax,
+            annot_kws={"fontsize": label_fontsize},
+            ax=ax_heatmap,
+            **kwargs,
         )
 
-        cbar = fig.colorbar(
-            heatmap.collections[0],
-            cax=cax,
-            orientation="vertical",
-        )
+        # Add the colorbar
+        if show_colorbar:
+            divider = make_axes_locatable(ax_heatmap)
+            cax = divider.append_axes(
+                "right", size=f"{cbar_width_ratio*100}%", pad=cbar_padding
+            )
 
-        cbar.ax.tick_params(labelsize=tick_fontsize)
-        cbar.set_label(cbar_label, fontsize=label_fontsize)
+            cbar = fig.colorbar(
+                heatmap.collections[0],
+                cax=cax,
+                orientation="vertical",
+            )
 
-        pos_heatmap = ax_heatmap.get_position()
-        pos_cax = cax.get_position()
-        cax.set_position(
-            [
-                pos_cax.x0,
-                pos_heatmap.y0,
-                pos_cax.width,
-                pos_heatmap.height,
-            ]
-        )
+            cbar.ax.tick_params(labelsize=tick_fontsize)
+            cbar.set_label(cbar_label, fontsize=label_fontsize)
 
-        for spine in cax.spines.values():
-            spine.set_visible(False)
+            pos_heatmap = ax_heatmap.get_position()
+            pos_cax = cax.get_position()
+            cax.set_position(
+                [
+                    pos_cax.x0,
+                    pos_heatmap.y0,
+                    pos_cax.width,
+                    pos_heatmap.height,
+                ]
+            )
 
-    # Set the title if provided
-    if title:
-        ax_heatmap.set_title(
-            "\n".join(textwrap.wrap(title, width=text_wrap)),
-            fontsize=label_fontsize,
-        )
+            for spine in cax.spines.values():
+                spine.set_visible(False)
 
-    # Apply custom labels if label_names is provided
-    if label_names:
-        heatmap.set_xticklabels(
-            [
-                "\n".join(
-                    textwrap.wrap(
-                        label_names.get(label.get_text(), label.get_text()),
-                        width=text_wrap,
+        # Set the title if provided
+        if title:
+            ax_heatmap.set_title(
+                "\n".join(textwrap.wrap(title, width=text_wrap)),
+                fontsize=label_fontsize,
+            )
+
+        # Apply custom labels if label_names is provided
+        if label_names:
+            heatmap.set_xticklabels(
+                [
+                    "\n".join(
+                        textwrap.wrap(
+                            label_names.get(label.get_text(), label.get_text()),
+                            width=text_wrap,
+                        )
                     )
-                )
-                for label in heatmap.get_xticklabels()
-            ],
-            rotation=xlabel_rot,
-            fontsize=tick_fontsize,
-            ha=xlabel_alignment,
-            rotation_mode="anchor",
-        )
-        heatmap.set_yticklabels(
-            [
-                "\n".join(
-                    textwrap.wrap(
-                        label_names.get(label.get_text(), label.get_text()),
-                        width=text_wrap,
+                    for label in heatmap.get_xticklabels()
+                ],
+                rotation=xlabel_rot,
+                fontsize=tick_fontsize,
+                ha=xlabel_alignment,
+                rotation_mode="anchor",
+            )
+            heatmap.set_yticklabels(
+                [
+                    "\n".join(
+                        textwrap.wrap(
+                            label_names.get(label.get_text(), label.get_text()),
+                            width=text_wrap,
+                        )
                     )
-                )
-                for label in heatmap.get_yticklabels()
-            ],
-            rotation=ylabel_rot,
-            fontsize=tick_fontsize,
-            va=ylabel_alignment,
-        )
-    else:
-        heatmap.set_xticklabels(
-            [
-                "\n".join(textwrap.wrap(label.get_text(), width=text_wrap))
-                for label in heatmap.get_xticklabels()
-            ],
-            rotation=xlabel_rot,
-            ha=xlabel_alignment,
-            fontsize=tick_fontsize,
-            rotation_mode="anchor",
-        )
-        heatmap.set_yticklabels(
-            [
-                "\n".join(textwrap.wrap(label.get_text(), width=text_wrap))
-                for label in heatmap.get_yticklabels()
-            ],
-            rotation=ylabel_rot,
-            va=ylabel_alignment,
-            fontsize=tick_fontsize,
-        )
+                    for label in heatmap.get_yticklabels()
+                ],
+                rotation=ylabel_rot,
+                fontsize=tick_fontsize,
+                va=ylabel_alignment,
+            )
+        else:
+            heatmap.set_xticklabels(
+                [
+                    "\n".join(textwrap.wrap(label.get_text(), width=text_wrap))
+                    for label in heatmap.get_xticklabels()
+                ],
+                rotation=xlabel_rot,
+                ha=xlabel_alignment,
+                fontsize=tick_fontsize,
+                rotation_mode="anchor",
+            )
+            heatmap.set_yticklabels(
+                [
+                    "\n".join(textwrap.wrap(label.get_text(), width=text_wrap))
+                    for label in heatmap.get_yticklabels()
+                ],
+                rotation=ylabel_rot,
+                va=ylabel_alignment,
+                fontsize=tick_fontsize,
+            )
 
-    # Adjust layout to prevent overlap
-    plt.subplots_adjust(
-        left=0.1,
-        right=0.9,
-        top=0.9,
-        bottom=0.1,
-        wspace=cbar_padding,
-    )
-
-    # Add significance legend note if stars mode is active
-    if show_significance and significance_method == "stars":
-        fig.canvas.draw()
-        renderer = fig.canvas.get_renderer()
-        tight_bbox = ax_heatmap.get_tightbbox(renderer)
-        fig_height = fig.get_size_inches()[1] * fig.dpi
-        legend_y = (tight_bbox.y0 / fig_height) - 0.05
-
-        fig.text(
-            significance_legend_x,
-            legend_y,
-            "* p < 0.05   ** p < 0.01   *** p < 0.001",
-            ha="center",
-            fontsize=tick_fontsize,
-            style="italic",
-            transform=fig.transFigure,
+        # Adjust layout to prevent overlap
+        plt.subplots_adjust(
+            left=0.1,
+            right=0.9,
+            top=0.9,
+            bottom=0.1,
+            wspace=cbar_padding,
         )
 
-    # Save via image_filename / _save_figure (preferred path)
-    if image_filename is not None:
-        _save_figure(
-            fig=fig,
-            image_path_png=image_path_png,
-            image_path_svg=image_path_svg,
-            filename=image_filename,
-            image_filename=image_filename,
-        )
+        # Add significance legend note if stars mode is active
+        if show_significance and significance_method == "stars":
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+            tight_bbox = ax_heatmap.get_tightbbox(renderer)
+            fig_height = fig.get_size_inches()[1] * fig.dpi
+            legend_y = (tight_bbox.y0 / fig_height) - 0.05
 
-    # Legacy save_plots path — derives filename from title
-    elif save_plots:
-        filename_title = title or "Correlation Matrix"
-        safe_title = filename_title.replace(" ", "_").replace(":", "").lower()
-        _save_figure(
-            fig=fig,
-            image_path_png=image_path_png,
-            image_path_svg=image_path_svg,
-            filename=safe_title,
-            image_filename=image_filename,
-        )
+            fig.text(
+                significance_legend_x,
+                legend_y,
+                "* p < 0.05   ** p < 0.01   *** p < 0.001",
+                ha="center",
+                fontsize=tick_fontsize,
+                style="italic",
+                transform=fig.transFigure,
+            )
 
-    plt.show()
+        # Save via image_filename / _save_figure (preferred path)
+        if image_filename is not None:
+            _save_figure(
+                fig=fig,
+                image_path_png=image_path_png,
+                image_path_svg=image_path_svg,
+                filename=image_filename,
+                image_filename=image_filename,
+            )
+
+        # Legacy save_plots path — derives filename from title
+        elif save_plots:
+            filename_title = title or "Correlation Matrix"
+            safe_title = filename_title.replace(" ", "_").replace(":", "").lower()
+            _save_figure(
+                fig=fig,
+                image_path_png=image_path_png,
+                image_path_svg=image_path_svg,
+                filename=safe_title,
+                image_filename=image_filename,
+            )
+
+        plt.show()
+
+    if return_corr:
+        return corr_matrix
 
 
 ################################################################################
