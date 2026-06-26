@@ -50,6 +50,16 @@ def _save_figure(
     if image_path_svg:
         targets.append(os.path.join(image_path_svg, f"{stem}.svg"))
 
+    # A filename was provided but nothing was saveable: bare stem, no extension,
+    # no output directory. Fail loudly instead of silently no-op'ing.
+    if not targets:
+        raise ValueError(
+            f"Cannot save figure: `image_filename='{image_filename}'` has no "
+            "file extension and no `image_path_png` / `image_path_svg` was given. "
+            "Add an extension (e.g. '.png', '.jpg', '.svg') or pass an output "
+            "directory."
+        )
+
     for path in targets:
         directory = os.path.dirname(path)
         if directory:

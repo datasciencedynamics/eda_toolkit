@@ -43,9 +43,11 @@ def test_save_figure_no_filename_noop(fig_ax):
     _save_figure(fig=fig)
 
 
-def test_save_figure_no_paths_noop(fig_ax):
+def test_save_figure_bare_stem_no_dir_raises(fig_ax):
+    """Bare stem (no extension) with no output directory must raise, not silently no-op."""
     fig, _ = fig_ax
-    _save_figure(fig=fig, filename="test")
+    with pytest.raises(ValueError, match="no.*file extension"):
+        _save_figure(fig=fig, filename="test")
 
 
 def test_save_figure_png_and_svg(fig_ax, tmp_path):
