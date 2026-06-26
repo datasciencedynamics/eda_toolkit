@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
@@ -8,6 +9,8 @@ import matplotlib.pyplot as plt
 
 from eda_toolkit._plot_utils import (
     _save_figure,
+    _resolve_save_name,
+    _apply_thousands,
     _add_best_fit,
     _get_label,
     _get_palette,
@@ -40,9 +43,11 @@ def test_save_figure_no_filename_noop(fig_ax):
     _save_figure(fig=fig)
 
 
-def test_save_figure_no_paths_noop(fig_ax):
+def test_save_figure_bare_stem_no_dir_raises(fig_ax):
+    """Bare stem (no extension) with no output directory must raise, not silently no-op."""
     fig, _ = fig_ax
-    _save_figure(fig=fig, filename="test")
+    with pytest.raises(ValueError, match="no.*file extension"):
+        _save_figure(fig=fig, filename="test")
 
 
 def test_save_figure_png_and_svg(fig_ax, tmp_path):
@@ -57,6 +62,104 @@ def test_save_figure_png_and_svg(fig_ax, tmp_path):
         )
 
         assert mock_save.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# _save_figure: full-path saving, alias, auto-mkdir (refactor)
+# ---------------------------------------------------------------------------
+
+
+def test_save_figure_full_path_no_directory_arg(fig_ax, tmp_path):
+    """image_filename with an extension saves verbatim, no image_path_* needed."""
+    fig, _ = fig_ax
+    target = tmp_path / "verbatim.png"
+    _save_figure(fig=fig, image_filename=str(target))
+    assert target.exists()
+
+
+def test_save_figure_legacy_filename_alias(fig_ax, tmp_path):
+    """The old filename= keyword still works via the alias."""
+    fig, _ = fig_ax
+    _save_figure(fig=fig, image_path_png=str(tmp_path), filename="legacy")
+    assert (tmp_path / "legacy.png").exists()
+
+
+def test_save_figure_legacy_dir_plus_stem(fig_ax, tmp_path):
+    """Extensionless image_filename + directory writes {dir}/{stem}.png|.svg."""
+    fig, _ = fig_ax
+    _save_figure(
+        fig=fig,
+        image_path_png=str(tmp_path),
+        image_path_svg=str(tmp_path),
+        image_filename="stem",
+    )
+    assert (tmp_path / "stem.png").exists()
+    assert (tmp_path / "stem.svg").exists()
+
+
+def test_save_figure_creates_missing_directories(fig_ax, tmp_path):
+    """Nested output directories are created automatically."""
+    fig, _ = fig_ax
+    target = tmp_path / "a" / "b" / "c" / "nested.png"
+    _save_figure(fig=fig, image_filename=str(target))
+    assert target.exists()
+
+
+# ---------------------------------------------------------------------------
+# _resolve_save_name: single vs multi naming (refactor)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "user_filename, multi, expected",
+    [
+        ("", False, "auto"),
+        (None, False, "auto"),
+        ("myname", False, os.path.join("myname", "auto")),
+        ("out/dir/", False, os.path.join("out/dir/", "auto")),
+        ("dir/file.png", False, "dir/file.png"),
+        ("dir/file.png", True, os.path.join("dir", "auto.png")),
+        ("file.png", True, "auto.png"),
+        ("file.svg", False, "file.svg"),
+    ],
+)
+def test_resolve_save_name(user_filename, multi, expected):
+    assert _resolve_save_name(user_filename, "auto", multi=multi) == expected
+
+
+# ---------------------------------------------------------------------------
+# _apply_thousands: comma grouping on numeric axes (refactor)
+# ---------------------------------------------------------------------------
+
+
+def test_apply_thousands_commas_large_numbers(fig_ax):
+    fig, ax = fig_ax
+    ax.plot([0, 250000, 1400000], [1, 2, 3])
+    _apply_thousands(ax, axis="x")
+    fig.canvas.draw()
+    labels = [t.get_text() for t in ax.get_xticklabels()]
+    assert any("," in lbl for lbl in labels)
+
+
+def test_apply_thousands_preserves_decimals(fig_ax):
+    fig, ax = fig_ax
+    ax.plot([0.0, 0.25, 0.5, 0.75], [1, 2, 3, 4])
+    _apply_thousands(ax, axis="x")
+    fig.canvas.draw()
+    labels = [t.get_text() for t in ax.get_xticklabels() if t.get_text()]
+    assert any("." in lbl for lbl in labels)
+    assert not any("," in lbl for lbl in labels)
+
+
+def test_apply_thousands_axis_x_only_leaves_y_untouched(fig_ax):
+    fig, ax = fig_ax
+    ax.plot([0, 1000000], [0, 1000000])
+    _apply_thousands(ax, axis="x")
+    fig.canvas.draw()
+    x_labels = [t.get_text() for t in ax.get_xticklabels()]
+    y_labels = [t.get_text() for t in ax.get_yticklabels()]
+    assert any("," in lbl for lbl in x_labels)
+    assert not any("," in lbl for lbl in y_labels)
 
 
 def test_add_best_fit_with_legend(fig_ax):

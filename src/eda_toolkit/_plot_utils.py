@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import seaborn as sns
 import scipy.stats as stats
 import warnings
 from typing import Optional, List, Dict, Union, Tuple
-
 
 ################################################################################
 # Figure Saving Utility
@@ -15,62 +15,72 @@ from typing import Optional, List, Dict, Union, Tuple
 
 def _save_figure(
     *,
-    fig: Optional[plt.Figure] = None,
-    image_path_png: Optional[str] = None,
-    image_path_svg: Optional[str] = None,
-    filename: Optional[str] = None,
-    bbox_inches: str = "tight",
-    dpi: Optional[int] = None,
-) -> None:
+    fig=None,
+    image_path_png=None,
+    image_path_svg=None,
+    image_filename=None,
+    filename=None,  # legacy alias, keeps old call sites working
+    bbox_inches="tight",
+    dpi=None,
+):
     """
     Save a matplotlib figure to PNG and/or SVG.
 
-    This helper centralizes all figure-saving logic. Callers provide
-    output directories and a base filename. Full file paths are
-    constructed internally.
-
-    Parameters
-    ----------
-    fig : matplotlib.figure.Figure or None
-        Figure to save. If None, uses the current active figure.
-
-    image_path_png : str or None
-        Directory path where the PNG file should be saved.
-        If None, PNG output is skipped.
-
-    image_path_svg : str or None
-        Directory path where the SVG file should be saved.
-        If None, SVG output is skipped.
-
-    filename : str or None
-        Base filename without extension. If None, no files are saved.
-
-    bbox_inches : str, optional
-        Bounding box option passed to savefig.
-
-    dpi : int or None, optional
-        DPI for raster outputs such as PNG.
+    If ``image_filename`` has an extension it is saved verbatim (no directory
+    needed); otherwise it is used as a stem with ``image_path_png`` /
+    ``image_path_svg``. ``filename`` is a legacy alias for ``image_filename``.
     """
-    # Nothing to do
-    if filename is None or (image_path_png is None and image_path_svg is None):
+    # accept the old `filename` keyword as an alias for `image_filename`
+    if image_filename is None:
+        image_filename = filename
+    if image_filename is None:
         return
-
     fig = fig or plt.gcf()
 
+    stem, ext = os.path.splitext(os.path.basename(image_filename))
+    targets = []
+
+    # full path with extension -> save verbatim, no dirs required
+    if ext:
+        targets.append(image_filename)
+
+    # legacy: directory + base name, one file per requested format
     if image_path_png:
-        png_path = os.path.join(image_path_png, f"{filename}.png")
-        fig.savefig(
-            png_path,
-            bbox_inches=bbox_inches,
-            dpi=dpi,
+        targets.append(os.path.join(image_path_png, f"{stem}.png"))
+    if image_path_svg:
+        targets.append(os.path.join(image_path_svg, f"{stem}.svg"))
+
+    # A filename was provided but nothing was saveable: bare stem, no extension,
+    # no output directory. Fail loudly instead of silently no-op'ing.
+    if not targets:
+        raise ValueError(
+            f"Cannot save figure: `image_filename='{image_filename}'` has no "
+            "file extension and no `image_path_png` / `image_path_svg` was given. "
+            "Add an extension (e.g. '.png', '.jpg', '.svg') or pass an output "
+            "directory."
         )
 
-    if image_path_svg:
-        svg_path = os.path.join(image_path_svg, f"{filename}.svg")
-        fig.savefig(
-            svg_path,
-            bbox_inches=bbox_inches,
-        )
+    for path in targets:
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        fig.savefig(path, bbox_inches=bbox_inches, dpi=dpi)  # dpi ignored for vector
+
+
+def _resolve_save_name(user_filename, auto_stem, multi=False):
+    """Build the per-figure save name.
+    Single-file callers (multi=False) get the user's exact filename.
+    Multi-file callers (multi=True) keep the user's dir + extension but
+    use the auto name so the many files stay distinct."""
+    if not user_filename:
+        return auto_stem  # dirs-only (legacy)
+    directory, base = os.path.split(user_filename)
+    _, ext = os.path.splitext(base)
+    if not ext:  # bare path -> directory
+        return os.path.join(user_filename, auto_stem)
+    if multi:
+        return os.path.join(directory, f"{auto_stem}{ext}")
+    return user_filename  # single file -> honor it
 
 
 ################################################################################
@@ -91,6 +101,7 @@ def _apply_legend(ax, labels, loc, fontsize, reverse, bbox_to_anchor=None, ncols
         bbox_to_anchor=bbox_to_anchor,
         ncols=ncols,
     )
+
 
 # Helper: annotate stacked bar segments with values
 def _annotate_stacked(ax, data, fmt_func, kind, tick_fontsize):
@@ -125,7 +136,7 @@ def _annotate_stacked(ax, data, fmt_func, kind, tick_fontsize):
 
 
 ################################################################################
-# Best-Fit Line Utilitys
+# Best-Fit Line Utilities
 ################################################################################
 
 
@@ -189,6 +200,18 @@ def _get_palette(n_colors):
     Returns a 'tab10' color palette with the specified number of colors.
     """
     return sns.color_palette("tab10", n_colors=n_colors)
+
+
+def _apply_thousands(ax, axis="both"):
+    """Comma-group numeric tick labels while preserving decimals.
+
+    axis : "both", "x", or "y" — caller picks the numeric axis/axes.
+    """
+    fmt = mticker.FuncFormatter(lambda v, _: f"{v:,.10g}")
+    for a in (
+        (ax.xaxis, ax.yaxis) if axis == "both" else (getattr(ax, f"{axis}axis"),)
+    ):
+        a.set_major_formatter(fmt)
 
 
 ################################################################################
