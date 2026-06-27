@@ -39,14 +39,14 @@ as he developed professionally. He saw potential before it was fully formed and
 sparked an early interest in data by demonstrating the importance of tools like 
 VLOOKUP. His guidance and trust had a lasting impact. May he rest in peace.
 
-Version: 0.0.29
+Version: 0.0.30
 """
 
 # Assign only the detailed documentation to __doc__
 __doc__ = detailed_doc
 
 # Metadata
-__version__ = "0.0.29"
+__version__ = "0.0.30"
 __author__ = "Leonid Shpaner, Oscar Gil"
 __email__ = "lshpaner@ucla.edu; info@oscargildata.com"
 

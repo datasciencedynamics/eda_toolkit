@@ -82,7 +82,7 @@ If you use `eda_toolkit` in your research or projects, please consider citing it
   month        = aug,
   year         = 2024,
   publisher    = {Zenodo},
-  version      = {0.0.29},
+  version      = {0.0.30},
   doi          = {10.5281/zenodo.13162633},
   url          = {https://doi.org/10.5281/zenodo.13162633}
 }

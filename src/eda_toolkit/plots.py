@@ -1968,10 +1968,9 @@ def box_violin_plot(
                         .replace(")", "")
                         .replace("/", "_per_")
                     )
-                    combo = f"{safe_met_list}_by_{met_comp}_{plot_type}"
                     if_dir, if_base = os.path.split(image_filename)
                     if_stem, if_ext = os.path.splitext(if_base)
-                    per_combo_stem = f"{if_stem}_{combo}"
+                    per_combo_stem = f"{if_stem}_{safe_met_list}"
                     per_combo_name = (
                         os.path.join(if_dir, f"{per_combo_stem}{if_ext}")
                         if if_ext
@@ -2078,10 +2077,10 @@ def box_violin_plot(
         if image_filename is not None:
             if_dir, if_base = os.path.split(image_filename)
             if_stem, if_ext = os.path.splitext(if_base)
-            grid_stem = f"{if_stem}_{plot_type}"
-            grid_name = (
-                os.path.join(if_dir, f"{grid_stem}{if_ext}") if if_ext else grid_stem
-            )
+            if if_ext:
+                grid_name = image_filename  # new: full path, use as-is
+            else:
+                grid_name = f"{if_stem}_{plot_type}"  # legacy: unchanged
             _save_figure(
                 fig=fig,
                 image_path_png=image_path_png,

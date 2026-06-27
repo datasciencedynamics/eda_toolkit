@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="eda_toolkit",
-    version="0.0.29",
+    version="0.0.30",
     author="Leonid Shpaner, Oscar Gil",
     author_email="lshpaner@ucla.edu",
     description="A Python library for EDA, including visualizations, directory management, data preprocessing, reporting, and more.",
@@ -24,17 +24,17 @@ setup(
         "Operating System :: OS Independent",
     ],  # Classifiers for the package
     python_requires=">=3.8",
-        install_requires=[
-            "jinja2>=3.0.0",
-            "matplotlib>=3.5.3,<=3.9.2",
-            "nbformat>=4.2.0,<=5.10.4",
-            "numpy>=1.21.6,<=2.1.2",
-            "pandas>=1.3.5,<=2.2.3",
-            "plotly>=5.18.0,<=5.24.1",
-            "scikit-learn>=1.0.2,<=1.2.2",
-            "scipy>=1.7.3",
-            "seaborn>=0.12.2,<=0.13.2",
-            "tqdm>=4.66.4,<=4.67.1",
-            "xlsxwriter==3.2.0",
-        ],
+    install_requires=[
+        "jinja2>=3.0.0",
+        "matplotlib>=3.5.3,<=3.9.2",
+        "nbformat>=4.2.0,<=5.10.4",
+        "numpy>=1.21.6,<=2.1.2",
+        "pandas>=1.3.5,<=2.2.3",
+        "plotly>=5.18.0,<=5.24.1",
+        "scikit-learn>=1.0.2,<=1.2.2",
+        "scipy>=1.7.3",
+        "seaborn>=0.12.2,<=0.13.2",
+        "tqdm>=4.66.4,<=4.67.1",
+        "xlsxwriter==3.2.0",
+    ],
 )
