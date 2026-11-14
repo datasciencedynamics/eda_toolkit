@@ -2784,6 +2784,7 @@ def flex_corr_matrix(
     figsize: Tuple[int, int] = (10, 10),
     title: Optional[str] = None,
     label_fontsize: int = 12,
+    annot_fontsize: Optional[int] = None,
     tick_fontsize: int = 10,
     xlabel_rot: int = 45,
     ylabel_rot: int = 0,
@@ -2865,6 +2866,11 @@ def flex_corr_matrix(
 
     label_fontsize : int, optional (default=12)
         Font size for axis labels and title.
+
+    annot_fontsize : int, optional (default=None)
+        Font size of the correlation values written in the cells. Defaults to
+        `label_fontsize`. Lower it when stars or long labels make the cell
+        text overflow.
 
     tick_fontsize : int, optional (default=10)
         Font size for tick labels and colorbar labels.
@@ -3437,7 +3443,7 @@ def flex_corr_matrix(
             cbar=False,
             vmin=plot_vmin,
             vmax=plot_vmax,
-            annot_kws={"fontsize": label_fontsize},
+            annot_kws={"fontsize": annot_fontsize or label_fontsize},
             ax=ax_heatmap,
             **kwargs,
         )
