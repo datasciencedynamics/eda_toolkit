@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use eda_toolkit in your research, please cite it using the metadata below."
+type: software
+title: "EDA Toolkit"
+abstract: "A Python library of composable functions for exploratory data analysis: stratified descriptive tables (Table 1), batch outlier detection and normality testing, goodness-of-fit diagnostics, correlation matrices with significance testing, formatted Excel exports, and publication-ready visualizations."
+authors:
+  - family-names: Shpaner
+    given-names: Leonid
+    email: lshpaner@ucla.edu
+  - family-names: Gil
+    given-names: Oscar
+version: 0.0.30
+date-released: 2024-08-01
+doi: 10.5281/zenodo.13162633
+license: MIT
+repository-code: "https://github.com/datasciencedynamics/eda_toolkit"
+url: "https://datasciencedynamics.com/eda_toolkit_docs/"
+keywords:
+  - exploratory data analysis
+  - data visualization
+  - descriptive statistics
+  - python
+  - pandas
+  - reproducible research
