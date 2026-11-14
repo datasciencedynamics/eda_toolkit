@@ -699,7 +699,9 @@ def summarize_all_combinations(
                 start=2,
             ):
                 cell = f"A{i}"
-                toc_worksheet.write_url(cell, f"#'{sheet_name}'!A1", string=sheet_name)
+                toc_worksheet.write_url(
+                    cell, f"internal:'{sheet_name}'!A1", string=sheet_name
+                )
 
             # Set column widths and alignment for Table of Contents
             toc_worksheet.set_column("A:A", 50)  # Set width for column A (Sheet Name)

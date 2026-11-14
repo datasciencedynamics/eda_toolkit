@@ -23,15 +23,15 @@ Additionally, `eda_toolkit` depends on the following packages, which will be aut
 
 - `jinja2`: version `3.0.0` or higher
 - `matplotlib`: version `3.5.3` or higher
-- `nbformat`: version `4.2.0` or higher, but capped at `5.10.4`
-- `numpy`: version `1.21.6` or higher, but capped at `2.1.2`
-- `pandas`: version `1.3.5` or higher, but capped at `2.2.3`
-- `plotly`: version `5.18.0` or higher, but capped at `5.24.1`
+- `nbformat`: version `4.2.0` or higher
+- `numpy`: version `1.21.6` or higher
+- `pandas`: version `1.3.5` or higher
+- `plotly`: version `5.18.0` or higher
 - `scikit-learn`: version `1.0.2` or higher
 - `scipy`: version `1.7.3` or higher
-- `seaborn`: version `0.12.2` or higher, but capped at `0.13.2`
+- `seaborn`: version `0.12.2` or higher
 - `tqdm`: version `4.66.4` or higher
-- `xlsxwriter`: version `3.2.0` (exact version required)
+- `xlsxwriter`: version `3.2.0` or higher
 
 ## 💾 Installation
 
