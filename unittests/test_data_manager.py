@@ -22,7 +22,7 @@ from eda_toolkit import (
     save_dataframes_to_excel,
     summarize_all_combinations,
     highlight_columns,
-    custom_help,
+    about,
     eda_toolkit_logo,
     detailed_doc,
     groupby_imputer,
@@ -766,39 +766,23 @@ def test_highlight_columns():
     ), "Column B should not be styled"
 
 
-def test_custom_help_module(capsys):
-    """
-    Test that custom_help() prints ASCII art and documentation when called with None.
-    """
-    custom_help()
+def test_about_prints_logo_and_docs(capsys):
+    """about() prints the ASCII logo and the package overview."""
+    about()
     captured = capsys.readouterr()
     assert eda_toolkit_logo in captured.out, "ASCII art should be printed."
     assert detailed_doc in captured.out, "Detailed documentation should be printed."
 
 
-def test_custom_help_other_objects(capsys):
-    """Test that custom_help(obj) calls the original help function for other objects."""
-    obj = int  # Using a built-in type as a test case
-    custom_help = builtins.help  # Capture the original help function
-
-    custom_help(obj)
+def test_builtin_help_not_overridden(capsys):
+    """Importing eda_toolkit must leave Python's builtin help() untouched."""
+    assert builtins.help is not about
+    help(int)
     captured = capsys.readouterr()
-
-    # Verify that ASCII art and custom docs are NOT printed
     assert eda_toolkit_logo not in captured.out
-    assert detailed_doc not in captured.out
-
-    # Ensure original help() output is present
     assert (
         "class int" in captured.out or "Help on class int" in captured.out
-    ), "Original help should be invoked for int."
-
-
-def test_custom_help_override():
-    """Test that builtins.help is overridden by custom_help."""
-    assert (
-        builtins.help == custom_help
-    ), "builtins.help should be overridden by custom_help."
+    ), "Builtin help should behave normally."
 
 
 def test_returns_dataframe(sample_df):

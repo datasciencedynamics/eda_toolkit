@@ -3,8 +3,6 @@ from .plots import *
 from .data_manager import *
 from .art import *
 
-import builtins
-
 # Detailed Documentation
 detailed_doc = """
 Welcome to EDA Toolkit, a collection of utility functions designed to streamline 
@@ -50,22 +48,7 @@ __version__ = "0.0.30"
 __author__ = "Leonid Shpaner, Oscar Gil"
 __email__ = "lshpaner@ucla.edu; info@oscargildata.com"
 
-# Backup the original help function BEFORE redefining
-original_help = builtins.help
-
-
-def custom_help(obj=None):
-    if obj is None or obj is sys.modules[__name__]:
-        print(eda_toolkit_logo)
-        print(detailed_doc)
-    elif original_help != custom_help:
-        original_help(obj)
-    else:
-        # Safety: fallback to default help if somehow it got overridden incorrectly
-        import pydoc
-
-        pydoc.help(obj)
-
-
-# Override the global help
-builtins.help = custom_help
+def about():
+    """Print the eda_toolkit logo, package overview, and version."""
+    print(eda_toolkit_logo)
+    print(detailed_doc)
