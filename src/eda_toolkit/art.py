@@ -665,3 +665,10 @@ def print_art(
     if output_file and output:
         with open(output_file, "w") as file:
             file.writelines(output)
+
+
+def about():
+    """Print the eda_toolkit logo, package overview, and version."""
+    import eda_toolkit
+
+    print(eda_toolkit.__doc__)

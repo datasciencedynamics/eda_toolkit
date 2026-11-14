@@ -8,6 +8,8 @@ import sys
 import os
 import datetime
 import builtins
+import eda_toolkit
+from eda_toolkit.art import about, eda_toolkit_logo
 from unittest.mock import MagicMock, patch
 from eda_toolkit import (
     ensure_directory,
@@ -22,9 +24,6 @@ from eda_toolkit import (
     save_dataframes_to_excel,
     summarize_all_combinations,
     highlight_columns,
-    about,
-    eda_toolkit_logo,
-    detailed_doc,
     groupby_imputer,
     del_inactive_dataframes,
     table1_to_str,
@@ -771,7 +770,7 @@ def test_about_prints_logo_and_docs(capsys):
     about()
     captured = capsys.readouterr()
     assert eda_toolkit_logo in captured.out, "ASCII art should be printed."
-    assert detailed_doc in captured.out, "Detailed documentation should be printed."
+    assert "Welcome to EDA Toolkit" in captured.out, "Detailed documentation should be printed."
 
 
 def test_builtin_help_not_overridden(capsys):

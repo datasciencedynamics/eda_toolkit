@@ -1,10 +1,11 @@
 # Import package modules
 from .plots import *
 from .data_manager import *
-from .art import *
+from .art import print_art, about
+from .art import eda_toolkit_logo as _eda_toolkit_logo
 
 # Detailed Documentation
-detailed_doc = """
+_detailed_doc = """
 Welcome to EDA Toolkit, a collection of utility functions designed to streamline 
 your exploratory data analysis (EDA) tasks. This repository offers tools for 
 directory management, some data preprocessing, reporting, visualizations, and 
@@ -41,29 +42,23 @@ Version: 0.0.30
 """
 
 # Assign only the detailed documentation to __doc__
-__doc__ = eda_toolkit_logo + detailed_doc
+__doc__ = _eda_toolkit_logo + _detailed_doc
 
 # Metadata
 __version__ = "0.0.30"
 __author__ = "Leonid Shpaner, Oscar Gil"
 __email__ = "lshpaner@ucla.edu; info@oscargildata.com"
 
-def about():
-    """Print the eda_toolkit logo, package overview, and version."""
-    print(eda_toolkit_logo)
-    print(detailed_doc)
+# Keep the package namespace to eda_toolkit's own functions, classes and
+# submodules. Star-imports above also pull in third-party names (pandas,
+# typing aliases, flags) that would otherwise clutter help(eda_toolkit).
+import types as _types
 
+for _name, _obj in list(globals().items()):
+    if _name.startswith("_") or isinstance(_obj, _types.ModuleType):
+        continue
+    if callable(_obj) and getattr(_obj, "__module__", "").startswith("eda_toolkit"):
+        continue
+    del globals()[_name]
 
-# Public API: functions and classes defined in the library modules, plus
-# print_art and about. Keeps help(eda_toolkit) and star-imports to the API
-# and out of module-level constants such as the ASCII art strings.
-from . import plots as _plots, data_manager as _data_manager
-
-__all__ = sorted(
-    name
-    for module in (_plots, _data_manager)
-    for name, obj in vars(module).items()
-    if not name.startswith("_")
-    and callable(obj)
-    and getattr(obj, "__module__", None) == module.__name__
-) + ["print_art", "about"]
+del _name, _obj, _types
