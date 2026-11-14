@@ -4387,43 +4387,45 @@ def data_doctor(
                 if box_violin_ylim:
                     ax.set_ylim(box_violin_ylim)
 
-    # Display the cutoff text universally
-    if plot_type == ["kde", "hist", "box_violin"]:  # When using "all"
-        # configuration. Check if we have a 2D grid of axes or a single row
-        if n_rows > 1:
-            # Use dedicated row for text when in subplot mode with multiple rows
-            axes[1, 0].text(
-                0,
-                0.5,
-                f"Lower cutoff: {round(lower_cutoff, 2)} |"
-                f"Upper cutoff: {round(upper_cutoff, 2)}",
-                fontsize=label_fontsize,
-                ha="left",
-                va="center",
-            )
-            axes[1, 0].axis("off")
-            axes[1, 1].axis("off")
-            axes[1, 2].axis("off")
+    # Show the cutoff footer only when a cutoff was actually applied;
+    # otherwise the figure would print the data range labelled as cutoffs.
+    if apply_cutoff:
+        if plot_type == ["kde", "hist", "box_violin"]:  # When using "all"
+            # configuration. Check if we have a 2D grid of axes or a single row
+            if n_rows > 1:
+                # Use dedicated row for text when in subplot mode with multiple rows
+                axes[1, 0].text(
+                    0,
+                    0.5,
+                    f"Lower cutoff: {round(lower_cutoff, 2)} |"
+                    f"Upper cutoff: {round(upper_cutoff, 2)}",
+                    fontsize=label_fontsize,
+                    ha="left",
+                    va="center",
+                )
+                axes[1, 0].axis("off")
+                axes[1, 1].axis("off")
+                axes[1, 2].axis("off")
+            else:
+                # If only a single row of plots, add text below the plots in that row
+                fig.text(
+                    0.5,
+                    -0.05,  # Position below the plot
+                    f"Lower cutoff: {lower_cutoff:,.2f} | "
+                    f"Upper cutoff: {upper_cutoff:,.2f}",
+                    ha="center",
+                    fontsize=label_fontsize,
+                )
         else:
-            # If only a single row of plots, add text below the plots in that row
+            # Display text below the single plot row when using custom configuration
             fig.text(
                 0.5,
                 -0.05,  # Position below the plot
-                f"Lower cutoff: {lower_cutoff:,.0f} | "
-                f"Upper cutoff: {upper_cutoff:,.0f}",
+                f"Lower cutoff: {lower_cutoff:,.2f} | "
+                f"Upper cutoff: {upper_cutoff:,.2f}",
                 ha="center",
                 fontsize=label_fontsize,
             )
-    else:
-        # Display text below the single plot row when using custom configuration
-        fig.text(
-            0.5,
-            -0.05,  # Position below the plot
-            f"Lower cutoff: {lower_cutoff:,.0f} | "
-            f"Upper cutoff: {upper_cutoff:,.0f}",
-            ha="center",
-            fontsize=label_fontsize,
-        )
     # Apply layout adj. to prevent overlaps without affecting inter-plot spacing
     plt.tight_layout(pad=3.0, w_pad=1.5, h_pad=3.0)
 
