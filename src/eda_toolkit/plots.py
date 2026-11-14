@@ -3856,6 +3856,17 @@ def data_doctor(
             random_state=random_state,
         )[feature_name]
 
+    # Missing values cannot be transformed or summarized; work on the
+    # observed values only. Because feature_ keeps the original index, rows
+    # that were missing stay missing in any column written back to df.
+    n_missing = int(sampled_feature.isna().sum())
+    if n_missing:
+        print(
+            f"[info] {feature_name}: {n_missing:,} missing value(s) excluded "
+            f"from the transform and summary"
+        )
+        sampled_feature = sampled_feature.dropna()
+
     # New column name options when apply_as_new_col_to_df
     if apply_as_new_col_to_df:
         if scale_conversion is None and apply_cutoff:
@@ -4069,13 +4080,14 @@ def data_doctor(
 
     # Add column to dataframe along with data
     if apply_as_new_col_to_df and data_fraction == 1:
-        # Ensure feature_ has the same length as df
-        if len(feature_) != len(df):
+        # feature_ holds the observed rows only; its index must be a subset
+        # of df's so the write-back can align and leave missing rows as NaN
+        if not feature_.index.isin(df.index).all():
             raise ValueError(
-                "Length of transformed feature does not match length of DataFrame."
+                "Index of transformed feature does not align with the DataFrame."
             )
 
-        # Assign values directly
+        # Assign by index; rows excluded as missing come back as NaN
         df[new_col_name] = feature_.reindex(df.index)
         print()
         print("New Column Name:", new_col_name)
