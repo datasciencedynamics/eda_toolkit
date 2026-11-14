@@ -41,7 +41,7 @@ Version: 0.0.30
 """
 
 # Assign only the detailed documentation to __doc__
-__doc__ = detailed_doc
+__doc__ = eda_toolkit_logo + detailed_doc
 
 # Metadata
 __version__ = "0.0.30"
