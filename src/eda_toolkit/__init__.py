@@ -36,14 +36,14 @@ mentor, and friend at the Los Angeles Film School, who hired him early in his
 career, gave him room to grow, and first showed him what careful work with data
 could do. His trust and guidance left a lasting mark. May he rest in peace.
 
-Version: 0.1.0
+Version: 0.0.31
 """
 
 # Assign only the detailed documentation to __doc__
 __doc__ = _eda_toolkit_logo + _detailed_doc
 
 # Metadata
-__version__ = "0.1.0"
+__version__ = "0.0.31"
 __author__ = "Leonid Shpaner, Oscar Gil"
 __email__ = "lshpaner@ucla.edu; info@oscargildata.com"
 
