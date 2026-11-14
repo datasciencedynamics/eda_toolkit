@@ -52,3 +52,18 @@ def about():
     """Print the eda_toolkit logo, package overview, and version."""
     print(eda_toolkit_logo)
     print(detailed_doc)
+
+
+# Public API: functions and classes defined in the library modules, plus
+# print_art and about. Keeps help(eda_toolkit) and star-imports to the API
+# and out of module-level constants such as the ASCII art strings.
+from . import plots as _plots, data_manager as _data_manager
+
+__all__ = sorted(
+    name
+    for module in (_plots, _data_manager)
+    for name, obj in vars(module).items()
+    if not name.startswith("_")
+    and callable(obj)
+    and getattr(obj, "__module__", None) == module.__name__
+) + ["print_art", "about"]
