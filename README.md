@@ -1,12 +1,12 @@
 [![PyPI](https://img.shields.io/pypi/v/eda_toolkit.svg)](https://pypi.org/project/eda_toolkit/)
 [![Downloads](https://pepy.tech/badge/eda_toolkit)](https://pepy.tech/project/eda_toolkit)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/lshpaner/eda_toolkit/blob/main/LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/datasciencedynamics/eda_toolkit/blob/main/LICENSE.md)
 [![Tests](https://github.com/datasciencedynamics/eda_toolkit/actions/workflows/tests.yml/badge.svg)](https://github.com/datasciencedynamics/eda_toolkit/actions/workflows/tests.yml)
 [![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13162633.svg)](https://doi.org/10.5281/zenodo.13162633)
 
 <br>
 
-<img src="https://raw.githubusercontent.com/lshpaner/eda_toolkit/main/assets/eda_toolkit_logo.svg" width="300" style="border: none; outline: none; box-shadow: none;" oncontextmenu="return false;">
+<img src="https://raw.githubusercontent.com/datasciencedynamics/eda_toolkit/main/assets/eda_toolkit_logo.svg" width="300" style="border: none; outline: none; box-shadow: none;" oncontextmenu="return false;">
 
 <br>
 
@@ -90,7 +90,7 @@ Finally, Leon Shpaner would like to personally acknowledge his mentor, former ma
 
 ## ⚖️ License
 
-`eda_toolkit` is distributed under the MIT License. See [LICENSE](https://github.com/lshpaner/eda_toolkit/blob/main/LICENSE.md) for more information.
+`eda_toolkit` is distributed under the MIT License. See [LICENSE](https://github.com/datasciencedynamics/eda_toolkit/blob/main/LICENSE.md) for more information.
 
 ## 🛟 Support
 
