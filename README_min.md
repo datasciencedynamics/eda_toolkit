@@ -17,7 +17,7 @@ Welcome to EDA Toolkit, a collection of utility functions designed to streamline
 
 Before you install `eda_toolkit`, ensure your system meets the following requirements:
 
-- `Python`: Version `3.8` or higher.
+- `Python`: Version `3.10` or higher.
 
 Additionally, `eda_toolkit` depends on the following packages, which will be automatically installed when you install `eda_toolkit`:
 
@@ -57,7 +57,7 @@ We would like to express our deepest gratitude to Dr. Ebrahim Tarshizi of the Sh
 
 We thank Robert Lanzafame, PhD, for his feedback, encouragement, and thoughtful discussion following our presentation at JupyterCon, and Panayiotis Petousis, PhD, and Arthur Funnell from the CTSI UCLA Health data science team for their helpful comments, constructive feedback, and continued encouragement throughout the development of this library.
 
-Finally, Leon Shpaner would like to personally acknowledge his mentor, former manager, and friend, Gustavo Prado, who hired him at the Los Angeles Film School. Gustavo believed in him early on, gave him the opportunity to grow, and was patient as he developed professionally. He saw potential before it was fully formed and sparked an early interest in data by demonstrating the importance of tools like VLOOKUP. His guidance and trust had a lasting impact. May he rest in peace.
+Leon Shpaner also wishes to acknowledge Gustavo Prado, his former manager, mentor, and friend at the Los Angeles Film School, who hired him early in his career, gave him room to grow, and first showed him what careful work with data could do. His trust and guidance left a lasting mark, and he is remembered with gratitude.
 
 ## ⚖️ License
 
@@ -74,14 +74,14 @@ If you use `eda_toolkit` in your research or projects, please consider citing it
 
 ```bibtex
 
-@software{shpaner_2024_13162633,
+@software{shpaner_2026_13162633,
   author       = {Shpaner, Leonid and
                   Gil, Oscar},
   title        = {EDA Toolkit},
-  month        = aug,
-  year         = 2024,
+  month        = nov,
+  year         = 2026,
   publisher    = {Zenodo},
-  version      = {0.0.30},
+  version      = {0.1.0},
   doi          = {10.5281/zenodo.13162633},
   url          = {https://doi.org/10.5281/zenodo.13162633}
 }

@@ -31,21 +31,20 @@ and Arthur Funnell from the CTSI UCLA Health data science team for their helpful
 comments, constructive feedback, and continued encouragement throughout the 
 development of this library.
 
-Finally, Leon Shpaner would like to personally acknowledge his mentor, former 
-manager, and friend, Gustavo Prado, who hired him at the Los Angeles Film School. 
-Gustavo believed in him early on, gave him the opportunity to grow, and was patient 
-as he developed professionally. He saw potential before it was fully formed and 
-sparked an early interest in data by demonstrating the importance of tools like 
-VLOOKUP. His guidance and trust had a lasting impact. May he rest in peace.
+Leon Shpaner also wishes to acknowledge Gustavo Prado, his former manager,
+mentor, and friend at the Los Angeles Film School, who hired him early in his
+career, gave him room to grow, and first showed him what careful work with data
+could do. His trust and guidance left a lasting mark, and he is remembered with
+gratitude.
 
-Version: 0.0.30
+Version: 0.1.0
 """
 
 # Assign only the detailed documentation to __doc__
 __doc__ = _eda_toolkit_logo + _detailed_doc
 
 # Metadata
-__version__ = "0.0.30"
+__version__ = "0.1.0"
 __author__ = "Leonid Shpaner, Oscar Gil"
 __email__ = "lshpaner@ucla.edu; info@oscargildata.com"
 
