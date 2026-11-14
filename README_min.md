@@ -57,7 +57,7 @@ We would like to express our deepest gratitude to Dr. Ebrahim Tarshizi of the Sh
 
 We thank Robert Lanzafame, PhD, for his feedback, encouragement, and thoughtful discussion following our presentation at JupyterCon, and Panayiotis Petousis, PhD, and Arthur Funnell from the CTSI UCLA Health data science team for their helpful comments, constructive feedback, and continued encouragement throughout the development of this library.
 
-Leon Shpaner also wishes to acknowledge Gustavo Prado, his former manager, mentor, and friend at the Los Angeles Film School, who hired him early in his career, gave him room to grow, and first showed him what careful work with data could do. His trust and guidance left a lasting mark, and he is remembered with gratitude.
+Leon Shpaner also wishes to acknowledge Gustavo Prado, his former manager, mentor, and friend at the Los Angeles Film School, who hired him early in his career, gave him room to grow, and first showed him what careful work with data could do. His trust and guidance left a lasting mark. May he rest in peace.
 
 ## ⚖️ License
 

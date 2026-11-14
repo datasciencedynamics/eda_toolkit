@@ -34,8 +34,7 @@ development of this library.
 Leon Shpaner also wishes to acknowledge Gustavo Prado, his former manager,
 mentor, and friend at the Los Angeles Film School, who hired him early in his
 career, gave him room to grow, and first showed him what careful work with data
-could do. His trust and guidance left a lasting mark, and he is remembered with
-gratitude.
+could do. His trust and guidance left a lasting mark. May he rest in peace.
 
 Version: 0.1.0
 """
