@@ -566,13 +566,21 @@ def plot_distributions(
                         )
 
                 # After plotting logic, before showing the legend
-                handles, labels = ax.get_legend_handles_labels()
-
-                if show_legend and len(handles) > 0:
-                    ax.legend(loc=legend_loc)
-                else:
+                if hue is not None:
+                    # keep seaborn's hue legend; only reposition or remove it
                     if ax.get_legend() is not None:
-                        ax.get_legend().remove()
+                        if show_legend:
+                            sns.move_legend(ax, legend_loc)
+                        else:
+                            ax.get_legend().remove()
+                else:
+                    handles, labels = ax.get_legend_handles_labels()
+
+                    if show_legend and len(handles) > 0:
+                        ax.legend(loc=legend_loc)
+                    else:
+                        if ax.get_legend() is not None:
+                            ax.get_legend().remove()
 
             except Exception as e:
                 # Handle different Python versions or issues w/ legends & labels
@@ -756,13 +764,21 @@ def plot_distributions(
                             )
 
                     # After plotting logic, before showing the legend
-                    handles, labels = ax.get_legend_handles_labels()
-
-                    if show_legend and len(handles) > 0 and len(labels) > 0:
-                        ax.legend(loc=legend_loc)
-                    else:
+                    if hue is not None:
+                        # keep seaborn's hue legend; only reposition or remove it
                         if ax.get_legend() is not None:
-                            ax.get_legend().remove()
+                            if show_legend:
+                                sns.move_legend(ax, legend_loc)
+                            else:
+                                ax.get_legend().remove()
+                    else:
+                        handles, labels = ax.get_legend_handles_labels()
+
+                        if show_legend and len(handles) > 0 and len(labels) > 0:
+                            ax.legend(loc=legend_loc)
+                        else:
+                            if ax.get_legend() is not None:
+                                ax.get_legend().remove()
 
                 except Exception as e:
                     # Handle different Python versions or issues w/ legends & labels

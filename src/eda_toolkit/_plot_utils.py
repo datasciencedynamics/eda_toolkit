@@ -286,7 +286,9 @@ def _plot_density_overlays(
                 hue=hue,
                 color=curve_color if hue is None else None,
                 log_scale=log_scale,
-                label="kde",
+                # with hue, seaborn builds the legend from the hue levels;
+                # a fixed label would overwrite those entries
+                label=None if hue is not None else "kde",
                 **kwargs,
             )
             continue
