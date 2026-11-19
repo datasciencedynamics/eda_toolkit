@@ -29,7 +29,7 @@ pip install eda_toolkit
 
 ## Prerequisites
 
-- `Python`: Version `3.10` or higher
+- `Python`: Version `3.8` or higher
 
 Dependencies installed automatically:
 

@@ -17,7 +17,7 @@ Welcome to EDA Toolkit, a collection of utility functions designed to streamline
 
 Before you install `eda_toolkit`, ensure your system meets the following requirements:
 
-- `Python`: Version `3.10` or higher.
+- `Python`: Version `3.8` or higher.
 
 Additionally, `eda_toolkit` depends on the following packages, which will be automatically installed when you install `eda_toolkit`:
 
